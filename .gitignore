@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project
+output/
+.cache/
+*.log
+config/local.yaml
+config/secrets.yaml
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Internal tooling workspaces (not part of the skill)
+.openclaw/
+.serena/
+
+# Stray API-result dumps
+1a68cc184e4b434ff852747e75232d91.json

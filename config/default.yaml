@@ -1,0 +1,79 @@
+# Default configuration for similar-customer-miner
+
+project:
+  name: "similar-customer-miner"
+  version: "0.1.0"
+
+input:
+  # Supported formats: xlsx, csv, md
+  default_format: "xlsx"
+  # Column aliases for flexible parsing
+  column_aliases:
+    id: ["客户序号", "ID", "id", "customer_id"]
+    name: ["客户名", "公司名称", "customer_name", "company_name", "name"]
+    business_positioning: ["客户商业定位", "商业定位", "business_positioning"]
+    region_positioning: ["客户区域定位", "区域定位", "region_positioning"]
+    main_products: ["主营商品", "产品", "main_products", "products"]
+    hs_codes: ["HS CODE", "HS编码", "海关编码", "hs_code", "hs_codes"]
+    value_weight_ratio: ["价重比", "value_weight_ratio"]
+    industry_leader: ["该行业龙头公司", "行业龙头", "industry_leader"]
+    leader_revenue: ["龙头公司营业额", "leader_revenue"]
+    local_competitors: ["本土主要竞争对手", "竞争对手", "local_competitors"]
+    market_size: ["行业市场规模", "市场规模", "market_size"]
+    annual_shipment_frequency: ["年发货频次", "发货频次", "annual_shipment_frequency"]
+    annual_china_purchase: ["年中国采购额度", "中国采购额", "annual_china_purchase"]
+    customer_revenue: ["客户营业额", "营业额", "customer_revenue"]
+    shipping_modes: ["整柜 FOB", "FOB 拼箱", "整柜 DDU", "整柜 DDP", "空运 DDP", "海运散货", "shipping_modes"]
+    profit_level: ["盈利预期等级", "profit_level"]
+    margin_per_shipment: ["票均毛利", "margin_per_shipment"]
+
+output:
+  # Each field is expanded to _value, _citation, _confidence, _notes
+  default_format: "xlsx"
+  min_grade: "C"  # A, B, or C
+  include_summary_sheet: true
+
+discovery:
+  # Dual-channel candidate discovery. Both run per profile; results merged + deduped.
+  apify_enabled: true          # Apify keyword/HS search actor (verifier BOL is separate)
+  web_search_enabled: true     # keyless DuckDuckGo web search (also supplies domains)
+  web_max_queries: 4
+  web_results_per_query: 8
+  web_max_candidates_per_profile: 20
+  web_delay_seconds: 1.0
+  # Cost guard: only verify/enrich the top candidates by fit (see company_verify/enrichment).
+  max_verify_candidates: 30
+  fit_prefilter_threshold: 0.0   # 0 = verify all discovered (raise to gate BOL/Hunter cost)
+  hunter_max_lookups: 25         # per-run cap on Hunter domain searches (free tier ~50/mo)
+
+pipeline:
+  max_results_per_customer: 30
+  min_shipments: 5
+  # Country focus for MVP
+  target_countries: ["US", "USA"]
+  # Confidence threshold for A/B grading
+  # Restored to PRD defaults; demo fallback is explicitly marked in notes.
+  grade_thresholds:
+    A: 0.80
+    B: 0.50
+
+logging:
+  level: "INFO"
+  file: "logs/similar-customer-miner.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+google:
+  fact_check_api_key: ""  # Optional; set via config/local.yaml or GOOGLE_FACT_CHECK_API_KEY env var
+  fact_check_enabled: false  # Enable external fact-check lookups (kept off by default to save API calls)
+  timeout: 15
+
+cache:
+  enabled: true
+  dir: "~/.cache/similar-customer-miner"
+  ttl_days:
+    importyeti: 1
+    comtrade: 7
+    opencorporates: 30
+    website: 7
+    email: 30
+    google_factcheck: 7
