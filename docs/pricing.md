@@ -151,7 +151,7 @@
 # config/local.yaml
 apify:
   api_token: "你的 Apify Free token"
-  actor_id: "khadinakbar~importyeti-scraper"
+  discovery_actor_id: "zen-studio~importyeti-scraper"
 
 hunter:
   api_key: ""  # 先不填，用官网抓取
@@ -165,7 +165,7 @@ opencorporates:
 ```yaml
 apify:
   api_token: "你的 Apify Personal token"
-  actor_id: "khadinakbar~importyeti-scraper"
+  discovery_actor_id: "zen-studio~importyeti-scraper"
 
 hunter:
   api_key: "你的 Hunter Starter key"
