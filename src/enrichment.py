@@ -1,5 +1,7 @@
 """Enrich candidate companies with contacts, social links, and revenue."""
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
 
 from src.models import RawCompany, SimilarCompany
@@ -39,13 +41,15 @@ def enrich_companies(
     email_tool = EmailTool(config)
     social_tool = SocialTool(config)
     # Cost guard: cap Hunter domain lookups per run so a big candidate set cannot
-    # exhaust the (free-tier) monthly quota. Higher-priority candidates come first
-    # because discovery/verify preserve order and scoring runs after this stage.
+    # exhaust the (free-tier) monthly quota. The counter is shared across worker
+    # threads and guarded by a lock; which candidates consume the budget is
+    # first-come-first-served under concurrency, but the cap itself is exact.
     hunter_budget = [config.get("discovery", {}).get("hunter_max_lookups", 25)]
     hunter_used = [0]
+    hunter_lock = threading.Lock()
+    max_workers = max(1, int(config.get("pipeline", {}).get("max_workers", 8) or 1))
 
-    enriched: List[SimilarCompany] = []
-    for record in verified:
+    def _enrich_one(record: Dict[str, Any]) -> SimilarCompany:
         raw: RawCompany = record["raw"]
         website_data = record.get("website", {})
         is_demo = raw.datasource == "importyeti_demo"
@@ -59,10 +63,16 @@ def enrich_companies(
                 logger.warning("Enrichment scrape failed for %s: %s", raw.company_name, exc)
                 website_data = {"reachable": False}
 
-        company = _build_similar_company(
-            raw, website_data, email_tool, social_tool, hunter_budget, hunter_used
+        return _build_similar_company(
+            raw, website_data, email_tool, social_tool, hunter_budget, hunter_used, hunter_lock
         )
-        enriched.append(company)
+
+    if len(verified) > 1 and max_workers > 1:
+        logger.info("Enrichment running with %d workers", max_workers)
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            enriched = list(pool.map(_enrich_one, verified))
+    else:
+        enriched = [_enrich_one(record) for record in verified]
 
     cap = config.get("discovery", {}).get("hunter_max_lookups", 25)
     if hunter_used[0]:
@@ -78,6 +88,7 @@ def _build_similar_company(
     social_tool: SocialTool,
     hunter_budget: Optional[List[int]] = None,
     hunter_used: Optional[List[int]] = None,
+    hunter_lock: Optional[threading.Lock] = None,
 ) -> SimilarCompany:
     emails = list(website_data.get("emails", []))
     phones = list(website_data.get("phones", []))
@@ -111,12 +122,20 @@ def _build_similar_company(
     # discovered email is generic/departmental. Demo fallback avoids bulk API consumption.
     hunter_contacts: List[Dict[str, Any]] = []
     should_query_hunter = (not emails) or all(is_generic_email(email) for email in emails)
+    # Atomic check-and-increment of the shared Hunter budget (lock is None only
+    # in single-threaded/test usage).
     budget_ok = True
-    if hunter_budget is not None and hunter_used is not None:
-        budget_ok = hunter_used[0] < hunter_budget[0]
+    if domain and should_query_hunter and not is_demo and hunter_budget is not None and hunter_used is not None:
+        if hunter_lock is not None:
+            with hunter_lock:
+                budget_ok = hunter_used[0] < hunter_budget[0]
+                if budget_ok:
+                    hunter_used[0] += 1
+        else:
+            budget_ok = hunter_used[0] < hunter_budget[0]
+            if budget_ok:
+                hunter_used[0] += 1
     if domain and should_query_hunter and not is_demo and budget_ok:
-        if hunter_used is not None:
-            hunter_used[0] += 1
         hunter_contacts = email_tool.hunter_domain_contacts(domain)
         hunter_emails = [contact.get("email") for contact in hunter_contacts if contact.get("email")]
         if hunter_emails:

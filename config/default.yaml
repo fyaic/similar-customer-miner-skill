@@ -40,7 +40,7 @@ discovery:
   web_max_queries: 4
   web_results_per_query: 8
   web_max_candidates_per_profile: 20
-  web_delay_seconds: 1.0
+  web_delay_seconds: 0.3
   # Cost guard: only verify/enrich the top candidates by fit (see company_verify/enrichment).
   max_verify_candidates: 30
   fit_prefilter_threshold: 0.0   # 0 = verify all discovered (raise to gate BOL/Hunter cost)
@@ -49,6 +49,10 @@ discovery:
 pipeline:
   max_results_per_customer: 30
   min_shipments: 5
+  # Thread-pool width for the network-bound stages (discovery / verify / enrich).
+  # All external calls are polite HTTP with per-request timeouts; 8 keeps us well
+  # within Apify/Hunter/OpenCorporates rate limits while cutting wall time ~6-8x.
+  max_workers: 8
   # Country focus for MVP
   target_countries: ["US", "USA"]
   # Confidence threshold for A/B grading
@@ -66,6 +70,14 @@ google:
   fact_check_api_key: ""  # Optional; set via config/local.yaml or GOOGLE_FACT_CHECK_API_KEY env var
   fact_check_enabled: false  # Enable external fact-check lookups (kept off by default to save API calls)
   timeout: 15
+
+web_scraper:
+  timeout: 8        # per-request seconds (was 15; slow/dead sites fail fast)
+  retries: 1        # one retry is enough for reachability checks (was 2)
+  delay_seconds: 0.5
+
+social:
+  timeout: 5        # per-link HEAD/GET seconds (was hardcoded 10)
 
 cache:
   enabled: true
