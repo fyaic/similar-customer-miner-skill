@@ -99,7 +99,7 @@ def verify_companies(companies: List[RawCompany], config: Dict[str, Any]) -> Lis
     if len(companies) > 1 and max_workers > 1:
         logger.info("Company verify running with %d workers", max_workers)
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            outcomes = pool.map(_verify_one, work)
+            outcomes = list(pool.map(_verify_one, work))
     else:
         outcomes = [_verify_one(item) for item in work]
 
