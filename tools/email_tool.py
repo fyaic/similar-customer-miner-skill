@@ -97,7 +97,10 @@ class EmailTool:
                 )
             return contacts
         except Exception as exc:
-            logger.warning("Hunter.io domain search failed: %s", exc)
+            resp = getattr(exc, "response", None)
+            status = getattr(resp, "status_code", None)
+            detail = f"HTTP {status}" if status else exc.__class__.__name__
+            logger.warning("Hunter.io domain search failed for %s: %s", domain, detail)
             return []
 
 

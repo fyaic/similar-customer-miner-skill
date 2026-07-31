@@ -10,7 +10,8 @@ name or domain are excluded so output is genuinely "similar NEW buyers", not the
 seed companies themselves.
 """
 import logging
-from typing import Any, Dict, List, Set
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict, List, Set, Tuple
 
 from src.models import CustomerProfile, RawCompany
 from src.utils import get_cache_dir, normalize_company_name
@@ -27,13 +28,8 @@ def discover_buyers(
 ) -> List[RawCompany]:
     """Discover candidate companies for each customer profile (dual channel)."""
     tool = ImportYetiTool(config, cache_dir=get_cache_dir(config))
-    disc = config.get("discovery", {})
-    apify_on = disc.get("apify_enabled", True)
-    web_on = disc.get("web_search_enabled", True)
-    max_results = config.get("pipeline", {}).get("max_results_per_customer", 30)
-    min_shipments = config.get("pipeline", {}).get("min_shipments", 5)
-    country = (config.get("pipeline", {}).get("target_countries", ["US"]) or ["US"])[0]
     is_live = config.get("runtime", {}).get("mode") == "live"
+    max_workers = max(1, int(config.get("pipeline", {}).get("max_workers", 8) or 1))
 
     seed_keys = _seed_keys(profiles)
     all_companies: List[RawCompany] = []
@@ -41,43 +37,21 @@ def discover_buyers(
     seen_domains: Set[str] = set()
     stats = {"apify": 0, "web_search": 0, "demo": 0, "excluded_seed": 0, "deduped": 0}
 
-    for profile in profiles:
-        candidates: List[Dict[str, Any]] = []
+    # Per-profile candidate collection is network-bound (Apify actor runs + web
+    # search), so live mode fans it out across a thread pool. Demo/test stays
+    # sequential: it is offline, deterministic, and instant anyway.
+    if is_live and len(profiles) > 1 and max_workers > 1:
+        logger.info("Discovery running with %d workers", max_workers)
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            collected = [pool.submit(_collect_candidates, p, tool, config) for p in profiles]
+            per_profile = [f.result() for f in collected]
+    else:
+        per_profile = [_collect_candidates(p, tool, config) for p in profiles]
 
-        if not is_live:
-            # Offline demo/test channel: built-in importer pool, deterministic, no
-            # network and no env-token leakage. Live web/Apify runs only in mode=live.
-            for query in (profile.search_queries[:3] or [profile.customer_name or ""]):
-                if not query:
-                    continue
-                rows = tool._demo_results(query, min_shipments, max_results)
-                candidates.extend(rows)
-                stats["demo"] += len(rows)
-        else:
-            # Channel 1: Apify keyword/HS search (graceful — account limit / 403 tolerated)
-            if apify_on:
-                for query in (profile.search_queries[:3] or [profile.customer_name or ""]):
-                    if not query:
-                        continue
-                    try:
-                        rows = tool.keyword_search(
-                            query, country=country, min_shipments=min_shipments, limit=max_results
-                        )
-                        for r in rows:
-                            r.setdefault("datasource", "apify_kw")
-                        candidates.extend(rows)
-                        stats["apify"] += len(rows)
-                    except Exception as exc:
-                        logger.warning("Apify keyword discovery failed for %s: %s", query, exc)
-
-            # Channel 2: Web search (keyless) — also supplies the official website/domain
-            if web_on:
-                try:
-                    web_rows = web_discovery.search_importers(profile, country=country, config=config)
-                    candidates.extend(web_rows)
-                    stats["web_search"] += len(web_rows)
-                except Exception as exc:
-                    logger.warning("Web discovery failed for %s: %s", profile.customer_id, exc)
+    country = (config.get("pipeline", {}).get("target_countries", ["US"]) or ["US"])[0]
+    for profile, (candidates, delta) in zip(profiles, per_profile):
+        for key in ("apify", "web_search", "demo"):
+            stats[key] += delta.get(key, 0)
 
         # Merge: exclude seeds, dedup by normalized name + domain
         for item in candidates:
@@ -123,6 +97,66 @@ def discover_buyers(
     )
     config.setdefault("_run_stats", {})["discovery"] = stats
     return all_companies
+
+
+def _collect_candidates(
+    profile: CustomerProfile,
+    tool: ImportYetiTool,
+    config: Dict[str, Any],
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    """Collect raw candidates for one profile via the demo or live channels.
+
+    Thread-safe: only touches its own profile/candidate list and stateless tools,
+    so live mode can call this from a thread pool. Returns (candidates, stats_delta).
+    """
+    disc = config.get("discovery", {})
+    apify_on = disc.get("apify_enabled", True)
+    web_on = disc.get("web_search_enabled", True)
+    max_results = config.get("pipeline", {}).get("max_results_per_customer", 30)
+    min_shipments = config.get("pipeline", {}).get("min_shipments", 5)
+    country = (config.get("pipeline", {}).get("target_countries", ["US"]) or ["US"])[0]
+    is_live = config.get("runtime", {}).get("mode") == "live"
+
+    candidates: List[Dict[str, Any]] = []
+    delta = {"apify": 0, "web_search": 0, "demo": 0}
+
+    if not is_live:
+        # Offline demo/test channel: built-in importer pool, deterministic, no
+        # network and no env-token leakage. Live web/Apify runs only in mode=live.
+        for query in (profile.search_queries[:3] or [profile.customer_name or ""]):
+            if not query:
+                continue
+            rows = tool._demo_results(query, min_shipments, max_results)
+            candidates.extend(rows)
+            delta["demo"] += len(rows)
+        return candidates, delta
+
+    # Channel 1: Apify keyword/HS search (graceful — account limit / 403 tolerated)
+    if apify_on:
+        for query in (profile.search_queries[:3] or [profile.customer_name or ""]):
+            if not query:
+                continue
+            try:
+                rows = tool.keyword_search(
+                    query, country=country, min_shipments=min_shipments, limit=max_results
+                )
+                for r in rows:
+                    r.setdefault("datasource", "apify_kw")
+                candidates.extend(rows)
+                delta["apify"] += len(rows)
+            except Exception as exc:
+                logger.warning("Apify keyword discovery failed for %s: %s", query, exc)
+
+    # Channel 2: Web search (keyless) — also supplies the official website/domain
+    if web_on:
+        try:
+            web_rows = web_discovery.search_importers(profile, country=country, config=config)
+            candidates.extend(web_rows)
+            delta["web_search"] += len(web_rows)
+        except Exception as exc:
+            logger.warning("Web discovery failed for %s: %s", profile.customer_id, exc)
+
+    return candidates, delta
 
 
 def _seed_keys(profiles: List[CustomerProfile]) -> Set[str]:

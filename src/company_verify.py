@@ -1,6 +1,8 @@
 """Verify company existence and enrich registration details."""
 import logging
-from typing import Any, Dict, List
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.models import RawCompany
 from src.utils import get_cache_dir
@@ -18,6 +20,11 @@ def verify_companies(companies: List[RawCompany], config: Dict[str, Any]) -> Lis
     candidate genuinely imports and backfills shipments/HS/shipping-spend. It is no
     longer a discovery source. BOL is cost-gated and fails gracefully (e.g. Apify
     monthly hard-limit).
+
+    Per-company verification is network-bound, so companies are verified in a
+    thread pool (pipeline.max_workers). Order of the returned list matches the
+    input order; the BOL cost gate (max_verify_candidates) applies to input order
+    exactly as in the sequential version.
     """
     oc_tool = OpenCorporatesTool(config, cache_dir=get_cache_dir(config))
     bol_tool = ImportYetiTool(config, cache_dir=get_cache_dir(config))
@@ -26,17 +33,22 @@ def verify_companies(companies: List[RawCompany], config: Dict[str, Any]) -> Lis
     disc = config.get("discovery", {})
     max_verify = disc.get("max_verify_candidates", 30)
     country = (config.get("pipeline", {}).get("target_countries", ["US"]) or ["US"])[0]
-    bol_stats = {"attempted": 0, "verified": 0, "failed": 0, "skipped_cost": 0, "circuit_open": False}
-    bol_disabled = False  # circuit breaker: stop after Apify account hard-limit
-    verified: List[Dict[str, Any]] = []
+    max_workers = max(1, int(config.get("pipeline", {}).get("max_workers", 8) or 1))
 
-    for idx, company in enumerate(companies):
+    bol_stats = {"attempted": 0, "verified": 0, "failed": 0, "skipped_cost": 0, "circuit_open": False}
+    # Circuit breaker: stop after Apify account hard-limit. An Event so workers
+    # in flight see it immediately instead of queueing more doomed BOL runs.
+    bol_disabled = threading.Event()
+
+    def _verify_one(item: Tuple[int, RawCompany]) -> Tuple[int, Dict[str, Any], Dict[str, int]]:
+        idx, company = item
         record: Dict[str, Any] = {"raw": company, "verification": {}, "website": {}, "bol": {}}
+        delta = {"attempted": 0, "verified": 0, "failed": 0, "skipped_cost": 0}
 
         # BOL import verification (live only, cost-gated, graceful, circuit-broken)
-        if is_live and bol_tool.token and not bol_disabled:
+        if is_live and bol_tool.token and not bol_disabled.is_set():
             if idx < max_verify:
-                bol_stats["attempted"] += 1
+                delta["attempted"] += 1
                 try:
                     rows = bol_tool.verify_import(company.company_name, country=country, limit=3)
                     summary = _summarize_bol(rows)
@@ -50,19 +62,19 @@ def verify_companies(companies: List[RawCompany], config: Dict[str, Any]) -> Lis
                             company.procurement_proxy_notes = (
                                 "Estimated shipping spend (BOL), not verified customs procurement value"
                             )
-                        bol_stats["verified"] += 1
+                        delta["verified"] += 1
                 except Exception as exc:
                     logger.warning("BOL verify failed for %s: %s", company.company_name, exc)
                     record["bol"] = {"verified": False, "error": str(exc)}
-                    bol_stats["failed"] += 1
+                    delta["failed"] += 1
                     # Trip the circuit on account-level hard limit / forbidden — further
                     # calls would only waste time failing identically.
                     if any(s in str(exc).lower() for s in ("hard limit", "403", "forbidden", "feature-disabled")):
-                        bol_disabled = True
-                        bol_stats["circuit_open"] = True
-                        logger.warning("BOL circuit opened (account limit/403); skipping remaining BOL verifies")
+                        if not bol_disabled.is_set():
+                            bol_disabled.set()
+                            logger.warning("BOL circuit opened (account limit/403); skipping remaining BOL verifies")
             else:
-                bol_stats["skipped_cost"] += 1
+                delta["skipped_cost"] += 1
 
         try:
             oc_result = oc_tool.verify(company.company_name, company.country)
@@ -80,8 +92,24 @@ def verify_companies(companies: List[RawCompany], config: Dict[str, Any]) -> Lis
                 logger.warning("Website check failed for %s: %s", company.website, exc)
                 record["website"] = {"reachable": False, "error": str(exc)}
 
-        verified.append(record)
+        return idx, record, delta
 
+    results: List[Optional[Dict[str, Any]]] = [None] * len(companies)
+    work = list(enumerate(companies))
+    if len(companies) > 1 and max_workers > 1:
+        logger.info("Company verify running with %d workers", max_workers)
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            outcomes = pool.map(_verify_one, work)
+    else:
+        outcomes = [_verify_one(item) for item in work]
+
+    for idx, record, delta in outcomes:
+        results[idx] = record
+        for key, value in delta.items():
+            bol_stats[key] += value
+    bol_stats["circuit_open"] = bol_disabled.is_set()
+
+    verified = [r for r in results if r is not None]
     config.setdefault("_run_stats", {})["bol_verify"] = bol_stats
     logger.info("BOL verify: %s", bol_stats)
     return verified

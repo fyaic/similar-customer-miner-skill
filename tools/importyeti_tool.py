@@ -380,7 +380,7 @@ class ImportYetiTool:
                 if status != "SUCCEEDED":
                     raise RuntimeError(f"Apify run {status}: {data}")
                 return data
-            time.sleep(5)
+            time.sleep(2)
         raise RuntimeError("Apify run timed out")
 
     def _read_dataset(self, dataset_id: str, limit: int) -> List[Dict[str, Any]]:
