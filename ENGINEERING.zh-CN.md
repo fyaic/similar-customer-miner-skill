@@ -1,6 +1,8 @@
-# Similar Value Customer Miner
+# Similar Value Customer Miner — 工程文档
 
 一个 Kimi Code Skill，用于**从已成交的价值客户清单中，挖掘相似的海外 B2B 买家**，输出带来源（citation）、置信度（confidence）和事实核查状态的结构化线索表。
+
+**中文** · [English](ENGINEERING.md) — [用户文档 ›](README.md)
 
 > 典型场景：外贸销售手里有 15 家已成交的高毛利客户，想快速找到"目标行业/HS CODE 类似、采购规模接近、可触达"的潜在新客户。
 
@@ -17,39 +19,19 @@
 
 ## 核心流程
 
-```
-价值客户清单 (Excel/CSV)
-    │
-    ▼
-parser ──→ Customer 对象
-    │
-    ▼
-profiler ──→ CustomerProfile（6 维画像 + 搜索词）
-    │
-    ├──→ market_filter（UN Comtrade 宏观市场筛选，可选）
-    │
-    └──→ buyer_discovery（双通道：Apify 关键词/HS 搜索 ‖ Web 搜索，合并去重 + 排除种子）
-                │
-                ▼
-        company_verify（BOL 提单进口验证 + OpenCorporates 核验 + 官网可达性）
-                │
-                ▼
-        enrichment（官网/静态指针补全联系人、社媒）
-                │
-                ▼
-        validation（邮箱格式、社媒可达性校验）
-                │
-                ▼
-        entity_resolution（RapidFuzz 去重合并）
-                │
-                ▼
-        scoring（6 维相似度 + 字段置信度 → A/B/C 分级）
-                │
-                ▼
-        fact_check（本地合理性规则；Google 仅作外部 claim review 补充引用）
-                │
-                ▼
-        exporter ──→ Excel/CSV/Markdown（每字段 value/citation/confidence/notes）
+```mermaid
+flowchart TD
+    A[价值客户清单 Excel/CSV] --> B[parser<br/>Customer 对象]
+    B --> C[profiler<br/>6 维画像 + 搜索词]
+    C --> D[market_filter<br/>UN Comtrade 宏观市场筛选·可选]
+    C --> E[buyer_discovery<br/>双通道：Apify 关键词/HS 搜索 ‖ Web 搜索<br/>合并去重 + 排除种子]
+    E --> F[company_verify<br/>BOL 提单进口验证 + OpenCorporates 核验 + 官网可达性]
+    F --> G[enrichment<br/>官网/静态指针补全联系人、社媒]
+    G --> H[validation<br/>邮箱格式、社媒可达性校验]
+    H --> I[entity_resolution<br/>RapidFuzz 去重合并]
+    I --> J[scoring<br/>6 维相似度 + 字段置信度 → A/B/C 分级]
+    J --> K[fact_check<br/>本地合理性规则；Google 仅作外部 claim review 补充引用]
+    K --> L[exporter<br/>Excel/CSV/Markdown<br/>每字段 value/citation/confidence/notes]
 ```
 
 ---
