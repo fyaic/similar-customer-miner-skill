@@ -6,6 +6,10 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from src.secret_errors import (
+    SecretMissingError,
+    raise_for_status_classified,
+)
 from src.utils import cache_key, read_cache, write_cache
 
 logger = logging.getLogger("similar_customer_miner")
@@ -100,7 +104,7 @@ class ImportYetiTool:
 
         if not self.token:
             if not allow_fallback:
-                raise RuntimeError("Apify API token is not configured for live ImportYeti search")
+                raise SecretMissingError("apify", env_var="APIFY_API_TOKEN")
             return self._demo_results(query, min_shipments, limit)
 
         cache_key_val = cache_key("importyeti", role, query, min_shipments, limit)
@@ -138,7 +142,7 @@ class ImportYetiTool:
         to the web-search channel — this method never returns demo data.
         """
         if not self.token:
-            raise RuntimeError("Apify API token is not configured for keyword discovery")
+            raise SecretMissingError("apify", env_var="APIFY_API_TOKEN")
         actor_id = self.discovery_actor_id
         payload = self._build_discovery_input(query, country, min_shipments, limit)
         run = self._start_actor_run_with_payload(actor_id, payload)
@@ -175,7 +179,7 @@ class ImportYetiTool:
         url = f"{APFY_BASE}/users/me"
         headers = {"Authorization": f"Bearer {self.token}"}
         resp = requests.get(url, headers=headers, timeout=30)
-        resp.raise_for_status()
+        raise_for_status_classified("apify", resp)
         return resp.json().get("data", {})
 
     def get_actor_metadata(self, actor_id: Optional[str] = None) -> Dict[str, Any]:
@@ -185,7 +189,7 @@ class ImportYetiTool:
         url = f"{APFY_BASE}/acts/{actor_id or self.actor_id}"
         headers = {"Authorization": f"Bearer {self.token}"}
         resp = requests.get(url, headers=headers, timeout=30)
-        resp.raise_for_status()
+        raise_for_status_classified("apify", resp)
         return resp.json().get("data", {})
 
     def live_smoke(
@@ -332,7 +336,7 @@ class ImportYetiTool:
         headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
         logger.info("Calling Apify actor %s", actor_id)
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
-        resp.raise_for_status()
+        raise_for_status_classified("apify", resp)
         return resp.json().get("data", {})
 
     def _build_discovery_input(self, query: str, country: str, min_shipments: int, limit: int) -> Dict[str, Any]:
@@ -373,7 +377,7 @@ class ImportYetiTool:
         start = time.time()
         while time.time() - start < max_wait:
             resp = requests.get(url, headers=headers, timeout=30)
-            resp.raise_for_status()
+            raise_for_status_classified("apify", resp)
             data = resp.json().get("data", {})
             status = data.get("status")
             if status in {"SUCCEEDED", "FAILED", "TIMED-OUT", "ABORTED"}:
@@ -391,7 +395,7 @@ class ImportYetiTool:
         headers = {"Authorization": f"Bearer {self.token}"}
         params = {"limit": limit, "format": "json", "clean": "true"}
         resp = requests.get(url, headers=headers, params=params, timeout=60)
-        resp.raise_for_status()
+        raise_for_status_classified("apify", resp)
         return resp.json()
 
     def _demo_results(self, query: str, min_shipments: int, limit: int) -> List[Dict[str, Any]]:

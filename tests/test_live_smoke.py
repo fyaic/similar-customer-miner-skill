@@ -9,6 +9,7 @@ from tools.importyeti_tool import ImportYetiTool, _map_item
 
 def _response(payload):
     response = Mock()
+    response.status_code = 200
     response.json.return_value = payload
     response.raise_for_status.return_value = None
     return response

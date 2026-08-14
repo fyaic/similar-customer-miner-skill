@@ -1,3 +1,15 @@
+---
+name: similar-customer-miner
+description: |
+  从一份高价值客户清单出发，挖掘相似的海外 B2B 买家（外贸拓客）。
+  基于现有客户的行业定位、主营产品、HS 编码、价重比等特征，通过 Apify ImportYeti
+  提单数据 + 网络搜索双通道发现候选买家，再用 Hunter 邮箱发现 + OpenCorporates 公司核验
+  做富化，最终产出带引用来源、置信度评分和 A/B/C 分级的结构化 lead list。
+
+  触发场景：找相似公司、发现新 B2B 买家、外贸客户挖掘、生成带评分和引用的 lead list。
+  关键词：similar customer、buyer discovery、lead mining、外贸拓客、相似客户、B2B 买家挖掘。
+---
+
 # Skill: Similar Value Customer Miner
 
 ## Description

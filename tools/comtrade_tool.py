@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from src.secret_errors import SecretError, SecretMissingError, raise_for_status_classified
 from src.utils import cache_key, read_cache, write_cache
 
 logger = logging.getLogger("similar_customer_miner")
@@ -27,7 +28,8 @@ class ComtradeTool:
     def get_market_size(self, hs_code: str, reporter: str = "842", years: int = 1) -> List[Dict[str, Any]]:
         """Return top importing markets for an HS code."""
         if not self.subscription_key:
-            logger.debug("No UN Comtrade subscription key; skipping market size query.")
+            err = SecretMissingError("comtrade", env_var="COMTRADE_SUBSCRIPTION_KEY")
+            logger.debug("UN Comtrade skipped: %s", err)
             return []
 
         # MVP: query US imports from China for the HS chapter
@@ -42,6 +44,9 @@ class ComtradeTool:
             if self.cache_dir:
                 write_cache(self.cache_dir, cache_key_val, results)
             return results
+        except SecretError as exc:
+            logger.warning("UN Comtrade call failed for HS %s: %s", hs_code, exc)
+            return []
         except Exception as exc:
             logger.warning("UN Comtrade call failed for HS %s: %s", hs_code, exc)
             return []
@@ -53,7 +58,7 @@ class ComtradeTool:
             headers["Ocp-Apim-Subscription-Key"] = self.subscription_key
         params = {"reporterCode": reporter, "partnerCode": "156", "flowCode": "1"}
         resp = requests.get(url, headers=headers, params=params, timeout=20)
-        resp.raise_for_status()
+        raise_for_status_classified("comtrade", resp)
         data = resp.json()
         dataset = data.get("dataset", [])
         results = []

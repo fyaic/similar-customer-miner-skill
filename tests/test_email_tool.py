@@ -23,6 +23,7 @@ def test_hunter_config_overrides_env(monkeypatch):
 @patch("tools.email_tool.requests.get")
 def test_hunter_domain_search_calls_api(mock_get):
     mock_get.return_value = MagicMock(
+        status_code=200,
         json=lambda: {
             "data": {
                 "emails": [
@@ -30,7 +31,7 @@ def test_hunter_domain_search_calls_api(mock_get):
                     {"value": "info@example.com"},
                 ]
             }
-        }
+        },
     )
 
     tool = EmailTool({"hunter": {"api_key": "test-key"}})
@@ -46,6 +47,7 @@ def test_hunter_domain_search_calls_api(mock_get):
 @patch("tools.email_tool.requests.get")
 def test_hunter_domain_contacts_returns_structured_records(mock_get):
     mock_get.return_value = MagicMock(
+        status_code=200,
         json=lambda: {
             "data": {
                 "emails": [
@@ -58,7 +60,7 @@ def test_hunter_domain_contacts_returns_structured_records(mock_get):
                     }
                 ]
             }
-        }
+        },
     )
 
     tool = EmailTool({"hunter": {"api_key": "test-key"}})

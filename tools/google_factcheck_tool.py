@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import requests
 
+from src.secret_errors import SecretError, SecretMissingError, raise_for_status_classified
 from src.utils import cache_key, read_cache, write_cache
 
 logger = logging.getLogger("similar_customer_miner")
@@ -45,7 +46,8 @@ class GoogleFactCheckTool:
         - claimReview: list of reviews with publisher, url, textualRating, etc.
         """
         if not self.api_key:
-            logger.debug("Google Fact Check API key not configured; skipping.")
+            err = SecretMissingError("google", env_var="GOOGLE_FACT_CHECK_API_KEY")
+            logger.debug("Google Fact Check skipped: %s", err)
             return []
 
         if not query or not query.strip():
@@ -62,6 +64,9 @@ class GoogleFactCheckTool:
             if self.cache_dir:
                 write_cache(self.cache_dir, cache_key_val, results)
             return results
+        except SecretError as exc:
+            logger.warning("Google Fact Check API call failed: %s", exc)
+            return []
         except Exception as exc:
             logger.warning("Google Fact Check API call failed: %s", exc)
             return []
@@ -80,7 +85,7 @@ class GoogleFactCheckTool:
         }
         logger.info("Calling Google Fact Check API for query: %s", query)
         resp = requests.get(BASE_URL, params=params, timeout=self.timeout)
-        resp.raise_for_status()
+        raise_for_status_classified("google", resp)
         data = resp.json()
         claims = data.get("claims", [])
         # Flatten reviews for easier consumption

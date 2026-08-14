@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from src.secret_errors import SecretError, SecretMissingError, raise_for_status_classified
+
 logger = logging.getLogger("similar_customer_miner")
 
 GENERIC_EMAIL_LOCAL_PARTS = {
@@ -35,6 +37,8 @@ class EmailTool:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.hunter_key = config.get("hunter", {}).get("api_key") or os.getenv("HUNTER_API_KEY")
+        # Track the most recent credential error so callers / preflight can inspect it.
+        self.last_error: Optional[SecretError] = None
 
     def infer_pattern(self, domain: str, known_emails: List[str]) -> Optional[str]:
         """Infer email pattern from known emails for a domain."""
@@ -71,14 +75,21 @@ class EmailTool:
         return [contact["email"] for contact in contacts if contact.get("email")]
 
     def hunter_domain_contacts(self, domain: str) -> List[Dict[str, Any]]:
-        """Search Hunter.io for structured domain email records."""
+        """Search Hunter.io for structured domain email records.
+
+        Returns an empty list (and records the failure on ``self.last_error``)
+        when the key is missing or the call fails — email enrichment is
+        optional and must not break the pipeline.
+        """
         if not self.hunter_key:
+            self.last_error = SecretMissingError("hunter", env_var="HUNTER_API_KEY")
+            logger.warning("Hunter.io skipped: %s", self.last_error)
             return []
         try:
             url = "https://api.hunter.io/v2/domain-search"
             params = {"domain": domain, "api_key": self.hunter_key}
             resp = requests.get(url, params=params, timeout=20)
-            resp.raise_for_status()
+            raise_for_status_classified("hunter", resp)
             data = resp.json()
             contacts: List[Dict[str, Any]] = []
             for email_data in data.get("data", {}).get("emails", []):
@@ -96,6 +107,10 @@ class EmailTool:
                     }
                 )
             return contacts
+        except SecretError as exc:
+            self.last_error = exc
+            logger.warning("Hunter.io domain search failed for %s: %s", domain, exc)
+            return []
         except Exception as exc:
             resp = getattr(exc, "response", None)
             status = getattr(resp, "status_code", None)

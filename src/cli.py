@@ -21,6 +21,8 @@ from src import (
     validation,
 )
 from src.models import Customer, CustomerProfile, SimilarCompany
+from src.secret_errors import SecretError
+from src.secret_health import check_credentials, format_report
 
 logger = logging.getLogger("similar_customer_miner")
 
@@ -43,6 +45,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-results", type=int, default=None, help="Max candidates per seed")
     p.add_argument("--grade", default="C", choices=["A", "B", "C"], help="Minimum grade to output")
     p.add_argument("--log-level", default="INFO", help="Logging level")
+    p.add_argument(
+        "--preflight",
+        default="off",
+        choices=["off", "static", "live"],
+        help="Credential check before pipeline: off (default), static (config only), live (probe providers)",
+    )
     return p
 
 
@@ -58,9 +66,33 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.max_results:
         config.setdefault("pipeline", {})["max_results_per_customer"] = args.max_results
 
+    # Preflight credential check (static or live probe).
+    if args.preflight in {"static", "live"}:
+        health = check_credentials(
+            config,
+            live_probe=(args.preflight == "live"),
+            probe_only=["apify", "hunter", "google"] if args.preflight == "live" else None,
+        )
+        print(format_report(health))
+        if health.has_fatal:
+            print("\nPipeline aborted: required credential(s) missing or broken. Fix above and re-run.")
+            return 2
+
     try:
         run_pipeline(args.input, args.output, config, min_grade=args.grade)
         return 0
+    except SecretError as exc:
+        # Structured credential failure — print actionable summary, not a raw traceback.
+        print(f"\n{'=' * 60}")
+        print(f"Credential failure: [{exc.kind}] {exc.service}")
+        print(f"{'=' * 60}")
+        print(f"  Detail:   {exc}")
+        if exc.remediation:
+            print(f"  Fix:      {exc.remediation}")
+        print(f"  Hint:     run `python scripts/check_secrets.py --live` for a full health report")
+        print(f"{'=' * 60}")
+        logger.error("Pipeline aborted by credential failure: %s", exc)
+        return 2
     except Exception as exc:
         logger.exception("Pipeline failed: %s", exc)
         return 1
