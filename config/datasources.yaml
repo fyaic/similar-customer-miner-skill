@@ -1,36 +1,7 @@
-# Data source configuration template.
-# Copy this file to config/local.yaml and fill in your API keys.
-# Do NOT commit local.yaml or secrets.yaml.
-
-apify:
-  api_token: ""  # Apify API token for ImportYeti Actor; may also be set via APIFY_API_TOKEN
-  actor_role: "fallback"  # Recommended live pipeline source. "primary" is diagnostic only; it currently hits upstream 403.
-  actor_id: "khadinakbar~importyeti-scraper"  # Legacy; broken (HTTP failures, 0 rows). Do not use for discovery.
-  discovery_actor_id: "zen-studio~importyeti-scraper"  # Maintained keyword/HS importer search (11k+ runs). Returns US importers + shipment counts.
-  fallback_actor_id: "jungle_synthesizer~importyeti-bill-of-lading-scraper"  # Verified BOL Actor used as verifier.
-
-opencorporates:
-  api_token: ""  # Optional, raises rate limits; may also be set via OPENCORPORATES_API_TOKEN
-
-hunter:
-  api_key: ""  # Optional, for email discovery; may also be set via HUNTER_API_KEY
-
-comtrade:
-  subscription_key: ""  # Optional, for higher rate limits; may also be set via COMTRADE_SUBSCRIPTION_KEY
-
-google:
-  fact_check_api_key: ""  # Optional, Google Fact Check Tools API key; may also be set via GOOGLE_FACT_CHECK_API_KEY
-  fact_check_enabled: false  # Set to true to enable external fact-check lookups
-  timeout: 15
-
+# Legacy APIs are disabled in the v2 live pipeline. No keys are read here.
+tradewind:
+  max_credits: "2"
 email_verifier:
-  enabled: false  # Set to true only if SMTP port 25 is available
-
+  enabled: false
 sherlock:
-  enabled: false  # Set to true if sherlock is installed
-
-web_scraper:
-  user_agent: "Mozilla/5.0 (compatible; SimilarCustomerMiner/1.0)"
-  timeout: 5
-  retries: 1
-  delay_seconds: 0.5
+  enabled: false

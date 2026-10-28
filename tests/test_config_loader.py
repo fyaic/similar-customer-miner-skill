@@ -72,10 +72,10 @@ def test_cli_demo_mode_clears_api_credentials():
     assert config["google"]["fact_check_enabled"] is False
 
 
-def test_cli_live_mode_keeps_api_credentials():
+def test_cli_live_mode_discards_legacy_api_credentials():
     config = {"apify": {"api_token": "local-secret"}}
 
     _apply_runtime_mode(config, "live")
 
-    assert config["apify"]["api_token"] == "local-secret"
-    assert config["apify"]["actor_role"] == "fallback"
+    assert config["apify"]["api_token"] == ""
+    assert config["hunter"]["api_key"] == ""

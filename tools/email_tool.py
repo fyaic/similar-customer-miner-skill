@@ -34,7 +34,7 @@ class EmailTool:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.hunter_key = config.get("hunter", {}).get("api_key") or os.getenv("HUNTER_API_KEY")
+        self.hunter_key = "" if config.get("runtime", {}).get("mode") in {"demo", "test", "live"} else config.get("hunter", {}).get("api_key") or os.getenv("HUNTER_API_KEY")
 
     def infer_pattern(self, domain: str, known_emails: List[str]) -> Optional[str]:
         """Infer email pattern from known emails for a domain."""

@@ -1,0 +1,12 @@
+{
+  "clean_venv_install": true,
+  "portable_entrypoint": true,
+  "doctor_uses_bundled_key": true,
+  "unrelated_environment_key_ignored": true,
+  "offline_preview": true,
+  "offline_excel": true,
+  "offline_markdown": true,
+  "manifest_valid": true,
+  "public_source_secret_scan": true,
+  "network_calls": 0
+}

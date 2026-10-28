@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0rc1",
+  "date": "2026-10-28",
+  "tests_passed": 64,
+  "live_candidate_companies": 3,
+  "live_named_contact_candidates": 3,
+  "verified_mailboxes": 0,
+  "actual_total_credits_including_probes": "2.88",
+  "unresolved_billing": 0,
+  "api_calls_use_legacy_keys": false,
+  "source_citation_coverage": "32/32",
+  "business_output_check": "passed; import-frequency warnings retained",
+  "latest_run_reused_requests": 7,
+  "optional_customs_live_tested": false,
+  "optional_email_verification_live_tested": false,
+  "scope": "Bounded real API integration check; not a comparative sales-conversion benchmark"
+}

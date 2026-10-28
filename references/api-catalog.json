@@ -1,0 +1,887 @@
+{
+  "version": "2026-10-27",
+  "origin": "https://app.trade-wind.co",
+  "notes": "Request contracts independently extracted from official OpenAPI. Legacy and account routes from public command inventory; live verification is separate.",
+  "operations": {
+    "company.search": {
+      "method": "POST",
+      "path": "/api/company/search",
+      "title": "（瀑布流）企业搜索",
+      "sources": [
+        "https://docs.trade-wind.co/442720054e0.md"
+      ],
+      "schemas": [
+        {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": ">=1，默认为1"
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "无效或 <1 时默认 10，上限100"
+            },
+            "waterfall": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "description": "first_match（第一个匹配的）或aggregate（聚合匹配），此接口默认first_match"
+                },
+                "source_order": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "默认hunter → rocketreach → apollo → map → ecommerce。ecommerce.enabled == true 时将把 ecommerce 提到最前；local_search.enabled == true 时若顺序里还没有 map 相关项会追加 map"
+                },
+                "byok": {
+                  "type": "object",
+                  "properties": {
+                    "apollo_api_key": {
+                      "type": "string"
+                    },
+                    "rocketreach_api_key": {
+                      "type": "string"
+                    },
+                    "storelead_api_key": {
+                      "type": "string"
+                    },
+                    "snov_client_id": {
+                      "type": "string"
+                    },
+                    "snov_client_secret": {
+                      "type": "string"
+                    },
+                    "hunter_api_key": {
+                      "type": "string"
+                    }
+                  },
+                  "description": "可使用相应数据源中您自己的api key来减少积分消耗"
+                }
+              }
+            },
+            "company": {
+              "type": "object",
+              "properties": {
+                "names": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "没有域名时必传，与 domains 同时非空时 域名优先"
+                },
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "没有公司名时必传"
+                },
+                "keywords": {
+                  "type": "object",
+                  "properties": {
+                    "include": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "description": "公司相关描述词，仅RR/Hunter/Ecommerce支持"
+                }
+              }
+            },
+            "industry": {
+              "type": "object",
+              "properties": {
+                "include": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "description": "公司所属行业，apollo不支持此参数。"
+            },
+            "technologies": {
+              "type": "object",
+              "properties": {
+                "include": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "exclude": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "仅hunter支持"
+                }
+              },
+              "description": "例如\"salesforce\"(仅apollo/hunter/ecommerce支持，具体合法传参见”（瀑布流）获取合法technologies“接口"
+            },
+            "location": {
+              "type": "object",
+              "properties": {
+                "country_code": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "一定要用ISO2格式，参考：https://countrycodebase.com/zh-hans/iso-codes/"
+                },
+                "cities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "states": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "description": "公司所在地"
+            },
+            "size": {
+              "type": "object",
+              "properties": {
+                "employee_ranges": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "min": {
+                        "type": "integer"
+                      },
+                      "max": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                },
+                "revenue_ranges": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {}
+                  },
+                  "description": "仅Apollo/RR支持"
+                }
+              }
+            },
+            "funding": {
+              "type": "object",
+              "properties": {
+                "amount_min": {
+                  "type": "integer"
+                },
+                "amount_max": {
+                  "type": "integer"
+                }
+              }
+            },
+            "similar_to": {
+              "type": "boolean",
+              "description": "仅hunter支持此参数，默认false"
+            },
+            "ecommerce": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "默认不开启"
+                },
+                "platforms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "可传shopify和woocommerce"
+                },
+                "rank_platform": {
+                  "type": "object",
+                  "properties": {
+                    "rank_min": {
+                      "type": "integer",
+                      "description": "排名绝对值"
+                    },
+                    "rank_max": {
+                      "type": "integer",
+                      "description": "排名绝对值"
+                    },
+                    "percentile_min": {
+                      "type": "integer",
+                      "description": "排名相对值"
+                    },
+                    "percentile_max": {
+                      "type": "integer",
+                      "description": "排名相对值"
+                    }
+                  },
+                  "description": "指建站平台排名，例如shopify"
+                },
+                "rank_global": {
+                  "type": "object",
+                  "properties": {
+                    "rank_min": {
+                      "type": "integer",
+                      "description": "排名绝对值"
+                    },
+                    "rank_max": {
+                      "type": "integer",
+                      "description": "排名绝对值"
+                    },
+                    "percentile_min": {
+                      "type": "integer",
+                      "description": "排名相对值"
+                    },
+                    "percentile_max": {
+                      "type": "integer",
+                      "description": "排名相对值"
+                    }
+                  },
+                  "description": "指所有建站平台的综合排名"
+                }
+              }
+            },
+            "local_search": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "不传时默认为false"
+                },
+                "location": {
+                  "type": "string",
+                  "description": "通过指定GPS坐标来调整搜索区域的核心位置，格式为：@纬度,经度,缩放级别。\n例如@40.6973709,-74.1444871,11z。\n\n可以打开谷歌地图，将地图拖拽到目标位置，然后查看浏览器地址栏中的URL，即可获取相应的坐标。\n\n缩放级别虽为可选参数，但建议填写以提高搜索精度。取值范围为3z（完全缩小）到21z（完全放大）。\n通过“place_id”或“cid”查询时此参数无效。"
+                },
+                "language": {
+                  "type": "string",
+                  "description": "默认为英语"
+                },
+                "place_id": {
+                  "type": "string",
+                  "description": "Google地点ID用于唯一标识谷歌地图上的位置，适用于大多数地点（如商家、地标、公园、路口）。同一地点可能有多个不同ID，且这些ID可能随时间变化。"
+                },
+                "cid": {
+                  "type": "string",
+                  "description": "Google CID（客户标识号）是谷歌地图上特定商家页面的唯一识别编号"
+                }
+              }
+            },
+            "response": {
+              "type": "object",
+              "properties": {
+                "include_provider_raw": {
+                  "type": "boolean",
+                  "description": "不传时默认为false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "access": "data",
+      "live_verified": false
+    },
+    "company.enrich": {
+      "method": "POST",
+      "path": "/api/company/enrich",
+      "title": "（瀑布流）企业详情",
+      "sources": [
+        "https://docs.trade-wind.co/442720055e0.md"
+      ],
+      "schemas": [
+        {
+          "type": "object",
+          "properties": {
+            "identity": {
+              "type": "object",
+              "properties": {
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "与 names 至少传一个；同时传时以 domains 为准"
+                },
+                "names": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "没有域名时必传"
+                }
+              }
+            },
+            "waterfall": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "description": "first_match（第一个匹配的）或aggregate（聚合匹配），此接口默认aggregate"
+                },
+                "source_order": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "默认hunter → apollo → snov → rocketreach"
+                },
+                "byok": {
+                  "type": "object",
+                  "properties": {
+                    "hunter_api_key": {
+                      "type": "string"
+                    },
+                    "apollo_api_key": {
+                      "type": "string"
+                    },
+                    "snov_client_id": {
+                      "type": "string"
+                    },
+                    "snov_client_secret": {
+                      "type": "string"
+                    },
+                    "rocketreach_api_key": {
+                      "type": "string",
+                      "description": "classic / universal 均可，该源费用减半"
+                    }
+                  },
+                  "description": "可使用相应数据源中您自己的api key来减少积分消耗"
+                }
+              },
+              "description": "本次请求相关规则"
+            },
+            "response": {
+              "type": "object",
+              "properties": {
+                "include_provider_raw": {
+                  "type": "boolean",
+                  "description": "不传时默认为false"
+                }
+              }
+            }
+          },
+          "required": [
+            "identity"
+          ]
+        }
+      ],
+      "access": "data",
+      "live_verified": false,
+      "live_scope": "Hunter, one known RU domain, company record returned"
+    },
+    "people.search": {
+      "method": "POST",
+      "path": "/api/people/search",
+      "title": "（瀑布流）联系人搜索",
+      "sources": [
+        "https://docs.trade-wind.co/442720056e0.md"
+      ],
+      "schemas": [
+        {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": ">=1，默认为1"
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "无效或 <1 时默认为10，上限100"
+            },
+            "waterfall": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "description": "first_match（第一个匹配的）或aggregate（聚合匹配），此接口默认first_match"
+                },
+                "source_order": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "默认apollo → hunter → rocketreach"
+                },
+                "byok": {
+                  "type": "object",
+                  "properties": {
+                    "hunter_api_key": {
+                      "type": "string"
+                    },
+                    "apollo_api_key": {
+                      "type": "string"
+                    },
+                    "rocketreach_api_key": {
+                      "type": "string"
+                    }
+                  },
+                  "description": "可使用相应数据源中您自己的api key来减少积分用量"
+                }
+              },
+              "description": "本次请求相关规则"
+            },
+            "company": {
+              "type": "object",
+              "properties": {
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "可传多个"
+                },
+                "technologies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "例如\"Salesforce\", \"Google Analytics\"(仅apollo支持）"
+                },
+                "employee_count_ranges": {
+                  "type": "object",
+                  "properties": {
+                    "min": {
+                      "type": "integer"
+                    },
+                    "max": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "annual_revenue_ranges": {
+                  "type": "object",
+                  "properties": {
+                    "min": {
+                      "type": "integer"
+                    },
+                    "max": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "names": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "可传多个，与 domains 同时非空时域名优先"
+                },
+                "industry_keywords": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "仅Rocketreach支持"
+                }
+              }
+            },
+            "job": {
+              "type": "object",
+              "properties": {
+                "job_titles": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "可输入职位关键词"
+                },
+                "departments": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "可传值：\nexecutive\nit\nproduct_engineering\nfinance\nhr\nlegal\nmarketing\nhealth\noperations\nsales\neducation\nmanagement\nsupport\ndesign\ncommunication"
+                },
+                "seniorities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "可传值：\njunior\nsenior\nmanager\ndirector\nhead\nvp\nc_level\nowner\nfounder\npartner\nexecutive"
+                }
+              }
+            },
+            "company_locations": {
+              "type": "object",
+              "properties": {
+                "country_code": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "国家编码"
+                },
+                "state": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "州（仅美国支持）"
+                },
+                "city": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "城市"
+                }
+              },
+              "description": "仅Apollo支持"
+            },
+            "person_locations": {
+              "type": "object",
+              "properties": {
+                "country_code": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "国家编码"
+                },
+                "state": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "州（仅美国支持）"
+                },
+                "city": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "城市"
+                }
+              }
+            },
+            "person": {
+              "type": "object",
+              "properties": {
+                "first_name": {
+                  "type": "string"
+                },
+                "last_name": {
+                  "type": "string"
+                }
+              }
+            },
+            "education": {
+              "type": "object",
+              "properties": {
+                "schools": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "contact_requirements": {
+              "type": "object",
+              "properties": {
+                "contact_email_status": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "支持：verified / likely_to_engage / unknown / accept_all"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "access": "data",
+      "live_verified": false,
+      "live_scope": "Hunter, one BY domain, 3 candidate people"
+    },
+    "people.enrich": {
+      "method": "POST",
+      "path": "/api/people/enrich",
+      "title": "（瀑布流）联系人详情",
+      "sources": [
+        "https://docs.trade-wind.co/442720057e0.md"
+      ],
+      "schemas": [
+        {
+          "type": "object",
+          "properties": {
+            "identity": {
+              "type": "object",
+              "properties": {
+                "first_name": {
+                  "type": "string"
+                },
+                "last_name": {
+                  "type": "string"
+                },
+                "domain": {
+                  "type": "string"
+                },
+                "current_employer": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "通过api/people/search 接口可获得对应人物 source以及source_id，以进行查询"
+                },
+                "source_id": {
+                  "type": "string",
+                  "description": "通过api/people/search 接口可获得对应人物 source以及source_id，以进行查询"
+                },
+                "linkedin": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string",
+                  "description": "已知邮箱时可直接传入"
+                },
+                "company_name": {
+                  "type": "string",
+                  "description": "同 current_employer；使用 RocketReach 时必须提供"
+                }
+              }
+            },
+            "waterfall": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "description": "first_match（第一个匹配的）或aggregate（聚合匹配），此接口默认first_match"
+                },
+                "source_order": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "默认 hunter → apollo → snov → rocketreach"
+                },
+                "byok": {
+                  "type": "object",
+                  "properties": {
+                    "apollo_api_key": {
+                      "type": "string"
+                    },
+                    "hunter_api_key": {
+                      "type": "string"
+                    },
+                    "rocketreach_api_key": {
+                      "type": "string"
+                    },
+                    "snov_client_id": {
+                      "type": "string"
+                    },
+                    "snov_client_secret": {
+                      "type": "string"
+                    }
+                  },
+                  "description": "可使用相应数据源中您自己的api key来减少积分消耗"
+                },
+                "reveal_phone": {
+                  "type": "boolean",
+                  "description": "仅 true 或字符串 \"true\" 生效；不传 / false / \"false\" 均不生效"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "access": "data",
+      "live_verified": false,
+      "live_scope": "Hunter, one candidate, completed with no email and zero fee"
+    },
+    "email.verify": {
+      "method": "POST",
+      "path": "/api/email/verify",
+      "title": "（邮箱验证）单一邮箱查询",
+      "sources": [
+        "https://docs.trade-wind.co/442720058e0.md",
+        "https://docs.trade-wind.co/442720059e0.md",
+        "https://docs.trade-wind.co/442720060e0.md"
+      ],
+      "schemas": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "single"
+            },
+            "mode": {
+              "type": "string",
+              "description": "模式 quick / power"
+            },
+            "email": {
+              "type": "string",
+              "description": "邮箱"
+            }
+          },
+          "required": [
+            "type",
+            "mode",
+            "email"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "bulk_create"
+            },
+            "emails": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "邮箱"
+            },
+            "task_name": {
+              "type": "string",
+              "description": "任务名称"
+            }
+          },
+          "required": [
+            "type",
+            "emails",
+            "task_name"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "bulk_result"
+            },
+            "task_id": {
+              "type": "string",
+              "description": "任务id"
+            }
+          },
+          "required": [
+            "type",
+            "task_id"
+          ]
+        }
+      ],
+      "access": "data",
+      "live_verified": false,
+      "live_scope": "single/quick only; company email valid, catch_all null; bulk not live-tested"
+    },
+    "customs.reference.countries": {
+      "method": "GET",
+      "path": "/api/customs/reference/countries",
+      "title": "（海关）国家参考",
+      "sources": [
+        "https://docs.trade-wind.co/442720067e0.md"
+      ],
+      "schemas": [],
+      "access": "read",
+      "live_verified": false
+    },
+    "customs.search": {
+      "method": "POST",
+      "path": "/api/customs/search",
+      "title": "获取海关数据列表",
+      "sources": [
+        "https://docs.trade-wind.co/447390392e0.md"
+      ],
+      "schemas": [
+        {
+          "type": "object",
+          "properties": {
+            "start_time": {
+              "type": "string",
+              "description": "开始日期，格式 YYYY-MM-DD，用于限定查询时间范围的起始时间。"
+            },
+            "end_time": {
+              "type": "string",
+              "description": "结束日期，格式 YYYY-MM-DD，用于限定查询时间范围的结束时间。"
+            },
+            "product": {
+              "type": "string",
+              "description": "产品关键词，用于按产品名称筛选海关数据，例如 toy。"
+            },
+            "hscode": {
+              "type": "string",
+              "description": "商品 HS 编码，用于按海关商品编码筛选。为空时表示不过滤。"
+            },
+            "tradeCode": {
+              "type": "string",
+              "description": "贸易编码或业务筛选编码，用于扩展业务条件筛选。为空时表示不过滤。"
+            },
+            "exporter_country": {
+              "type": "string",
+              "description": "出口国家编码，用于筛选出口国家。为空时表示不限。参考\n/api/customs/reference/countries"
+            },
+            "importer_country": {
+              "type": "string",
+              "description": "进口国家编码，用于筛选进口国家。为空时表示不限。参考\n/api/customs/reference/countries"
+            },
+            "buyer": {
+              "type": "string",
+              "description": "买方公司名称，用于按采购商名称筛选，通常支持模糊搜索。"
+            },
+            "seller": {
+              "type": "string",
+              "description": "卖方公司名称，用于按供应商名称筛选，通常支持模糊搜索。"
+            },
+            "departure_port": {
+              "type": "string",
+              "description": "起运港名称或编码，用于按出发港口筛选。"
+            },
+            "buyer_port": {
+              "type": "string",
+              "description": "目的港或买方港口名称/编码，用于按到港信息筛选。"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "每页返回的数据条数，用于分页查询。每页数量:[10,20,50,100]"
+            },
+            "page": {
+              "type": "integer",
+              "description": "当前页码，用于分页查询，通常从 1 开始。"
+            },
+            "recordType": {
+              "type": "string",
+              "description": "记录类型，用于区分不同类型的海关记录。为空时表示不过滤。区分进出口数据:Import=进口数据，Export=出口数据"
+            },
+            "exclude_logistics": {
+              "type": "string",
+              "description": "是否排除物流相关记录或字段，用于过滤物流维度数据。为空时表示不启用该过滤条件。排除物流字符，可多个，用\",\"相连"
+            },
+            "exclude_type": {
+              "type": "string",
+              "description": "排除条件类型，用于指定按某种类型排除数据。为空时表示不启用排除条件。排除物流类型:importer=进口商,exporter=出口商,both=两者,none=不排除"
+            }
+          },
+          "required": [
+            "start_time",
+            "end_time",
+            "product"
+          ]
+        }
+      ],
+      "access": "data",
+      "live_verified": false
+    }
+  },
+  "deployment_notes": {
+    "insight_prefix": "/api/insight",
+    "verified_operation": "news/intelligence",
+    "verified_at": "2026-10-27",
+    "documented_prefix": "/insight",
+    "documented_prefix_observation": "307 frontend locale redirect; refuse credential forwarding"
+  }
+}

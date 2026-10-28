@@ -17,7 +17,7 @@ class OpenCorporatesTool:
 
     def __init__(self, config: Dict[str, Any], cache_dir: Optional[str] = None):
         self.config = config
-        self.token = config.get("opencorporates", {}).get("api_token") or os.getenv("OPENCORPORATES_API_TOKEN")
+        self.token = "" if config.get("runtime", {}).get("mode") in {"demo", "test", "live"} else config.get("opencorporates", {}).get("api_token") or os.getenv("OPENCORPORATES_API_TOKEN")
         self.cache_dir = cache_dir
 
     def verify(self, company_name: str, country: Optional[str] = None) -> Dict[str, Any]:

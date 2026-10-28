@@ -19,6 +19,7 @@ from src import (
     scoring,
     utils,
     validation,
+    tradewind,
 )
 from src.models import Customer, CustomerProfile, SimilarCompany
 
@@ -42,15 +43,29 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-local", action="store_true", help="Do not load config/local.yaml or config/secrets.yaml")
     p.add_argument("--max-results", type=int, default=None, help="Max candidates per seed")
     p.add_argument("--grade", default="C", choices=["A", "B", "C"], help="Minimum grade to output")
+    p.add_argument("--max-credits", default=None, help="Local cumulative credit budget (not provider hard cap)")
+    p.add_argument("--state-dir", default=None, help="Private billing/cache state directory")
+    p.add_argument("--env-file", default=None, help="Explicit Trade Wind env file override")
+    p.add_argument("--dry-run", action="store_true", help="Write request preview without network or credentials")
     p.add_argument("--log-level", default="INFO", help="Logging level")
     return p
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_arg_parser().parse_args(argv)
-    load_local = args.mode == "live" and not args.no_local
+    load_local = False  # v2 never loads legacy local.yaml/secrets.yaml credentials
     config = config_loader.load_config(args.config, load_local=load_local)
     _apply_runtime_mode(config, args.mode)
+    for key in ("max_credits", "state_dir", "env_file"):
+        if getattr(args, key) is not None:
+            config.setdefault("tradewind", {})[key] = getattr(args, key)
+    if args.dry_run:
+        profiles = profiler.profile_customers(parser.parse_customers(args.input, config.get("input", {}).get("column_aliases", {})))
+        preview = tradewind.preview(profiles, config, args.max_results)
+        from src.tradewind_core.security import private_json
+        private_json(args.output, preview)
+        print("Preview written; no API calls")
+        return 0
 
     log_level = args.log_level or config.get("logging", {}).get("level", "INFO")
     utils.setup_logging(log_level, config.get("logging", {}).get("file"))
@@ -60,6 +75,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     try:
         run_pipeline(args.input, args.output, config, min_grade=args.grade)
+        if config.get("_run_stats", {}).get("tradewind", {}).get("stop_reason"):
+            print("Partial output saved; inspect .stats.json and .evidence.json", file=sys.stderr)
+            return 2
         return 0
     except Exception as exc:
         logger.exception("Pipeline failed: %s", exc)
@@ -70,7 +88,9 @@ def _apply_runtime_mode(config: Dict[str, Any], mode: str) -> Dict[str, Any]:
     """Apply demo/test/live credential isolation to a loaded config."""
     config.setdefault("runtime", {})["mode"] = mode
     if mode == "live":
-        config.setdefault("apify", {}).setdefault("actor_role", "fallback")
+        for section, key in API_CREDENTIAL_FIELDS:
+            config.setdefault(section, {})[key] = ""
+        config.setdefault("google", {})["fact_check_enabled"] = False
     if mode in {"demo", "test"}:
         for section, key in API_CREDENTIAL_FIELDS:
             config.setdefault(section, {})[key] = ""
@@ -88,26 +108,21 @@ def run_pipeline(input_path: str, output_path: str, config: Dict[str, Any], min_
     profiles: List[CustomerProfile] = profiler.profile_customers(customers)
     logger.info("Parsed %d customers, generated %d profiles", len(customers), len(profiles))
 
-    # Optional market filter
-    try:
-        market_filter.rank_markets(profiles, config)
-    except Exception as exc:
-        logger.warning("Market filter skipped: %s", exc)
-
-    # P2: Buyer discovery
-    raw_companies = buyer_discovery.discover_buyers(profiles, config)
-
-    # P3: Company verify + enrichment
-    verified = company_verify.verify_companies(raw_companies, config)
-    enriched = enrichment.enrich_companies(verified, config)
-
-    # P4: Validation + entity resolution
-    validated = validation.validate_companies(enriched, config)
-    unique = entity_resolution.deduplicate_companies(validated)
-
-    # P5: Scoring + fact check
-    scored = scoring.score_companies(unique, profiles, config)
-    checked = fact_check.fact_check_companies(scored, config)
+    if config.get("runtime", {}).get("mode") == "live":
+        enriched = tradewind.mine(profiles, config, output_path)
+        # The Trade Wind path already deduplicates by exact name/domain. Fuzzy
+        # merges can incorrectly bind one person's email to another company.
+        checked = scoring.score_companies(enriched, profiles, config)
+        for company in checked:
+            company.fact_check_status = "pending"  # API evidence is not human verification
+    else:
+        raw_companies = buyer_discovery.discover_buyers(profiles, config)
+        verified = company_verify.verify_companies(raw_companies, config)
+        enriched = enrichment.enrich_companies(verified, config)
+        validated = validation.validate_companies(enriched, config)
+        unique = entity_resolution.deduplicate_companies(validated)
+        scored = scoring.score_companies(unique, profiles, config)
+        checked = fact_check.fact_check_companies(scored, config)
 
     # Filter by grade
     grade_order = {"A": 3, "B": 2, "C": 1}

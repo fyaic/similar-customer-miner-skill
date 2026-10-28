@@ -72,7 +72,7 @@ class ImportYetiTool:
 
     def __init__(self, config: Dict[str, Any], cache_dir: Optional[str] = None):
         self.config = config
-        self.token = config.get("apify", {}).get("api_token") or os.getenv("APIFY_API_TOKEN")
+        self.token = "" if config.get("runtime", {}).get("mode") in {"demo", "test", "live"} else config.get("apify", {}).get("api_token") or os.getenv("APIFY_API_TOKEN")
         self.actor_id = config.get("apify", {}).get("actor_id", "khadinakbar~importyeti-scraper")
         self.discovery_actor_id = config.get("apify", {}).get("discovery_actor_id") or self.actor_id
         self.fallback_actor_id = config.get("apify", {}).get("fallback_actor_id")

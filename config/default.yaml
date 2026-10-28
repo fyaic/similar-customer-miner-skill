@@ -2,7 +2,7 @@
 
 project:
   name: "similar-customer-miner"
-  version: "0.1.0"
+  version: "2.0.0rc1"
 
 input:
   # Supported formats: xlsx, csv, md
@@ -33,25 +33,15 @@ output:
   min_grade: "C"  # A, B, or C
   include_summary_sheet: true
 
+# Legacy offline/demo helpers; live discovery is configured under tradewind.
 discovery:
-  # Dual-channel candidate discovery. Both run per profile; results merged + deduped.
-  apify_enabled: true          # Apify keyword/HS search actor (verifier BOL is separate)
-  web_search_enabled: true     # keyless DuckDuckGo web search (also supplies domains)
-  web_max_queries: 4
-  web_results_per_query: 8
-  web_max_candidates_per_profile: 20
-  web_delay_seconds: 0.3
-  # Cost guard: only verify/enrich the top candidates by fit (see company_verify/enrichment).
-  max_verify_candidates: 30
-  fit_prefilter_threshold: 0.0   # 0 = verify all discovered (raise to gate BOL/Hunter cost)
-  hunter_max_lookups: 25         # per-run cap on Hunter domain searches (free tier ~50/mo)
+  apify_enabled: false
+  web_search_enabled: false
 
 pipeline:
   max_results_per_customer: 30
   min_shipments: 5
-  # Thread-pool width for the network-bound stages (discovery / verify / enrich).
-  # All external calls are polite HTTP with per-request timeouts; 8 keeps us well
-  # within Apify/Hunter/OpenCorporates rate limits while cutting wall time ~6-8x.
+  # Offline legacy pipeline worker count. Trade Wind paid calls are sequential.
   max_workers: 8
   # Country focus for MVP
   target_countries: ["US", "USA"]
@@ -67,7 +57,7 @@ logging:
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 google:
-  fact_check_api_key: ""  # Optional; set via config/local.yaml or GOOGLE_FACT_CHECK_API_KEY env var
+  fact_check_api_key: ""  # Disabled in v2 live mode
   fact_check_enabled: false  # Enable external fact-check lookups (kept off by default to save API calls)
   timeout: 15
 
@@ -89,3 +79,15 @@ cache:
     website: 7
     email: 30
     google_factcheck: 7
+
+# v2 live path: Trade Wind only. Values below never contain credentials.
+tradewind:
+  max_credits: "2"
+  max_enrich: 5
+  cache_days: 7
+  people_source: hunter
+  enrich_people: true
+  verify_email: false
+  customs_enabled: false
+  # customs_start / customs_end: YYYY-MM-DD; explicit window required when enabled
+  # customs_importer_country / customs_exporter_country: provider reference IDs

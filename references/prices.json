@@ -1,0 +1,334 @@
+{
+  "as_of": "2026-10-27",
+  "source": "https://api.trade-wind.co/zh/pricing",
+  "snapshot_sha256": "61e2f920eda41904ed56f4f7297cbafff64a8389853031f5ced02e782cc4910d",
+  "credits_per_usd": "40",
+  "evidence": "official_public_price_not_contract",
+  "rates": [
+    {
+      "operation": "company/search",
+      "source": "hunter",
+      "unit": "contributing source query",
+      "credits": ".24",
+      "byok_platform_credits": ".03",
+      "phone": false
+    },
+    {
+      "operation": "company/search",
+      "source": "apollo",
+      "unit": "contributing source query",
+      "credits": ".52",
+      "byok_platform_credits": ".06",
+      "phone": false
+    },
+    {
+      "operation": "company/search",
+      "source": "snov",
+      "unit": "contributing source query",
+      "credits": ".25",
+      "byok_platform_credits": ".03",
+      "phone": false
+    },
+    {
+      "operation": "company/search",
+      "source": "rocketreach",
+      "unit": "contributing source query",
+      "credits": ".72",
+      "byok_platform_credits": ".08",
+      "phone": false
+    },
+    {
+      "operation": "company/search",
+      "source": "map",
+      "unit": "contributing source query",
+      "credits": ".2",
+      "byok_platform_credits": ".1",
+      "phone": false
+    },
+    {
+      "operation": "company/search",
+      "source": "storelead",
+      "unit": "contributing source query",
+      "credits": "1.5",
+      "byok_platform_credits": ".75",
+      "phone": false
+    },
+    {
+      "operation": "people/search",
+      "source": "hunter",
+      "unit": "contributing source query",
+      "credits": ".24",
+      "byok_platform_credits": ".03",
+      "phone": false
+    },
+    {
+      "operation": "people/search",
+      "source": "apollo",
+      "unit": "contributing source query",
+      "credits": ".52",
+      "byok_platform_credits": ".06",
+      "phone": false
+    },
+    {
+      "operation": "people/search",
+      "source": "rocketreach",
+      "unit": "contributing source query",
+      "credits": ".72",
+      "byok_platform_credits": ".08",
+      "phone": false
+    },
+    {
+      "operation": "company/enrich",
+      "source": "hunter",
+      "unit": "contributing source query",
+      "credits": ".24",
+      "byok_platform_credits": ".03",
+      "phone": false
+    },
+    {
+      "operation": "company/enrich",
+      "source": "apollo",
+      "unit": "contributing source query",
+      "credits": ".52",
+      "byok_platform_credits": ".06",
+      "phone": false
+    },
+    {
+      "operation": "company/enrich",
+      "source": "snov",
+      "unit": "contributing source query",
+      "credits": ".25",
+      "byok_platform_credits": ".03",
+      "phone": false
+    },
+    {
+      "operation": "company/enrich",
+      "source": "rocketreach",
+      "unit": "contributing source query",
+      "credits": ".72",
+      "byok_platform_credits": ".08",
+      "phone": false
+    },
+    {
+      "operation": "people/enrich",
+      "source": "hunter",
+      "unit": "contributing source query",
+      "credits": ".24",
+      "byok_platform_credits": ".03",
+      "phone": false
+    },
+    {
+      "operation": "people/enrich",
+      "source": "apollo",
+      "unit": "contributing source query",
+      "credits": ".52",
+      "byok_platform_credits": ".06",
+      "phone": false
+    },
+    {
+      "operation": "people/enrich",
+      "source": "snov",
+      "unit": "contributing source query",
+      "credits": ".25",
+      "byok_platform_credits": ".03",
+      "phone": false
+    },
+    {
+      "operation": "people/enrich",
+      "source": "rocketreach",
+      "unit": "contributing source query",
+      "credits": ".72",
+      "byok_platform_credits": ".08",
+      "phone": false
+    },
+    {
+      "operation": "people/enrich",
+      "source": "apollo",
+      "unit": "contributing source query with phone",
+      "credits": "4.16",
+      "byok_platform_credits": ".48",
+      "phone": true
+    },
+    {
+      "operation": "people/enrich",
+      "source": "rocketreach",
+      "unit": "contributing source query with phone",
+      "credits": "7.2",
+      "byok_platform_credits": ".8",
+      "phone": true
+    },
+    {
+      "operation": "email/verify",
+      "unit": "address",
+      "credits": ".1"
+    },
+    {
+      "operation": "agentic",
+      "unit": "effective lead",
+      "credits": ".54"
+    },
+    {
+      "operation": "insight/company/basic-info",
+      "unit": "call",
+      "credits": "12"
+    },
+    {
+      "operation": "insight/news/intelligence",
+      "unit": "call",
+      "credits": "3"
+    },
+    {
+      "operation": "insight/personas/keywords",
+      "unit": "call",
+      "credits": "4"
+    },
+    {
+      "operation": "insight/customs/match",
+      "unit": "completed task",
+      "credits": "15"
+    },
+    {
+      "operation": "insight/customs/profile",
+      "unit": "completed task",
+      "credits": "6"
+    },
+    {
+      "operation": "customs/enrich",
+      "unit": "call legacy-unconfirmed",
+      "credits": "5"
+    },
+    {
+      "operation": "customs/companies/match-contacts",
+      "unit": "call",
+      "credits": "1.36"
+    },
+    {
+      "operation": "customs/search",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/directory",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/bulk-status",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/shipment-records",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/partners",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/hs-code-ranking",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/product-keywords",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/trade-areas",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/port-statistics",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/semantic-query",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/match",
+      "unit": "returned row",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/detail",
+      "unit": "call",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/companies/shipment-trend",
+      "unit": "call",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/analytics/market-trend",
+      "unit": "call",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/analytics/world-regions",
+      "unit": "call",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/analytics/cn-suppliers",
+      "unit": "call",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/analytics/trader-network",
+      "unit": "call",
+      "credits": ".14"
+    },
+    {
+      "operation": "customs/analytics/trader-network-extended",
+      "unit": "call",
+      "credits": ".14"
+    }
+  ],
+  "rules": {
+    "no_result_no_charge": "Scope-dependent. Live news response items=[] citations=[] charged 3 credits on 2026-10-27. Do not apply waterfall no-hit policy to Insight.",
+    "repeat_within_30_days": "vendor claim; exact cache identity and exceptions unverified",
+    "insufficient_balance": "website says reject; official skill says agentic can overdraw; unresolved",
+    "byok": "upstream costs separate; per-source platform rates below",
+    "insight_route": "2026-10-27 production news verified /api/insight/news/intelligence; documented /insight redirected to locale frontend"
+  },
+  "scenario_rates": {
+    "low": {
+      "company_search": ".24",
+      "company_enrich": ".24",
+      "people_search": ".24",
+      "people_enrich": ".24",
+      "email_verify": ".1",
+      "news": "3"
+    },
+    "base": {
+      "company_search": ".52",
+      "company_enrich": ".52",
+      "people_search": ".52",
+      "people_enrich": ".52",
+      "email_verify": ".1",
+      "news": "3"
+    },
+    "multi_source": {
+      "company_search": ".72",
+      "company_enrich": "1.73",
+      "people_search": ".72",
+      "people_enrich": "1.73",
+      "email_verify": ".1",
+      "news": "3"
+    }
+  },
+  "scenario_notes": {
+    "low": "Hunter only, all assumed useful; not proven possible",
+    "base": "Apollo only, all assumed useful; not measured",
+    "multi_source": "Search first-match RocketReach, enrich sum Hunter/Apollo/Snov/RocketReach; excludes phone/Map/Store Leads. Scenario, not upper bound."
+  }
+}

@@ -1,102 +1,29 @@
-# 相似价值客户挖掘 · Similar Value Customer Miner
+# 相似客户挖掘 · Trade Wind 2.0.0rc1
 
-> 给它一份已成交的客户清单，它还你一份画像相似的海外（美国）进口商名单——带联系方式、来源，并且每一行都标了可信度。
+从高价值客户名单找相似海外 B2B 公司，补充公司资料和候选联系人，输出带来源与评分的销售 Excel。保留原有画像、种子排除、评分与三页表格；在线查询已改为 Trade Wind，不使用原 Apify/Hunter key。
 
-**中文** · [English](README.en.md) — [工程文档 ›](ENGINEERING.zh-CN.md)
+## 安装和使用
 
-面向外贸 / BD：把"已成交客户"扩展成"相似的潜在新客户"名单，作为开发线索的起点。它做的是**信息搜集与整理**，不替代人工判断——很多线索仍需你复核后再触达。
-
-> **关于费用**：本 skill **零成本即可端到端运行**（免费网页搜索 + 免费邮箱额度），但**最佳效果依赖付费 API**——HS 精确海关发现、发货量验证、更多邮箱额度都需要付费数据源，约 $83/月起。成本分层、各服务价格与省钱策略详见 [数据成本与付费说明](docs/pricing.md)。
-
----
-
-## 海关数据 + 全网搜索，双通道挖掘相似进口商
-
-从已有客户的行业 / HS 编码 / 主营商品出发，同时走两条路找候选美国进口商——海关进口记录（ImportYeti）+ 全网公开搜索——然后：
-
-- **排除你的客户本身和行业龙头**，保证每条结果都是"相似的新公司"
-- 两通道**合并去重**，同一家公司不会出现两次
-- 不配任何 API key 也能跑，自动降级到免费网页搜索
-
-## 自动补齐官网、联系人、邮箱和社媒
-
-对每家候选公司尽量补齐官网、联系人姓名与职位、邮箱、电话、社媒。
-
-- **覆盖率取决于公开数据**——不是每家都能补全，没补全会如实标注，而不是悄悄留空
-- 部门邮箱（如 `info@`）和个人邮箱**分开标注**，让你知道这封信到底发给谁
-
-## 发货量与运费估算，量化买家进口实力
-
-对部分公司能查到发货量 / 进口频次 / HS，以及一个**预估运费支出**。
-
-- 预估值只是规模参考，会**明确标注为估算**
-- 它**不等于真实海关采购额**——真实采购额需要接商业海关库，本项目暂未接
-
-## 一张 Excel 三张表：名单、明细、评级说明
-
-![相似买家线索名单样例](docs/images/lead-list.png)
-
-- 上：**线索名单**，按优先级排序；橙色底的"采购(proxy)"列在提醒这是估算值
-- 下：**评级说明**，A / B / C 表示单条数据的可信度
-
-最终导出一张结构化的 Excel，三张表：线索名单（精简、按优先级排序、可直接用）、完整明细（全字段可审计）、统计与评级说明。中文表头，统一字体与配色。
-
-## A/B/C 可信评级 + 优先级打分，先跟谁谈一目了然
-
-| 评级 | 含义 | 建议 |
-|------|------|------|
-| **A** | 关键字段齐全且可信 | 可直接触达 |
-| **B** | 主要字段可信，部分需复核 | 复核后触达 |
-| **C** | 信息稀疏或待验证 | 先人工补全 |
-
-两个分数指引你，含义不同：
-
-- `fit_score`：候选与目标画像的相似程度
-- `priority_score`：综合相似度、进口实力、联系方式完整度；**名单就是按它排序的**
-
-每条线索还会过一遍规则事实核查：采购额 ≤ 营业额 × 70%、公司存在性、联系方式可达性、HS 与区域一致性，输出 `passed / pending / failed` 状态。可选接入 Google Fact Check，检索**已发布的外部事实核查**作为补充引用——它只是佐证，不构成对营收或采购额的证明。
-
-> 说明：受限于免费数据额度，一次跑出的线索里往往有相当比例是 C 级（联系方式没补全）。可以先按优先级取前若干家，再针对性补全。
-
-## 每个字段都带来源、可信度和备注
-
-每个字段都带三样东西：**来源、可信度（0–1）、备注**。估算值、推断值、未验证项都会显式标注，不会有任何数据悄悄冒充确定事实。
-
-数据全部来自公开渠道：
-
-- **海关进口记录**（ImportYeti 提单数据）：进口品类、发货量
-- **全网公开搜索**：公司官网与基本信息
-- **公开邮箱名录**（Hunter）：联系人邮箱与姓名职位
-
-不做登录态抓取，不采集个人隐私数据。
-
-## 三分钟上手：一张客户清单就够
-
-1. 一份客户清单（Excel / CSV），至少包含**目标行业**或 **HS 编码**（有主营商品更好）
-2. 直接跑——不配任何 API key 也能用（靠全网搜索 + 免费邮箱额度）；配置数据源 key 后结果更精准
-3. 打开 Excel，从名单顶部开始跟
-
-费用参考：免费可用；约 **$83/月**（Apify + Hunter 入门档）可解锁 HS 精确海关发现 + 发货量验证 + 更多邮箱额度。完整分层与省钱策略见 [数据成本与付费说明](docs/pricing.md)。
-
-## 安装到 Codex / Claude Code / Kimi Code
-
-本仓库是一个标准 Agent Skill（根目录含 `SKILL.md`），三个主流 AI 编程助手都能装：把仓库克隆到对应助手的 skills 目录即可——
+解压整个 `similar-customer-miner` 文件夹，包括隐藏目录。Python 3.10+：
 
 ```bash
-# Kimi Code
-git clone https://github.com/fyaic/similar-customer-miner-skill.git ~/.kimi-code/skills/similar-customer-miner
-
-# Claude Code
-git clone https://github.com/fyaic/similar-customer-miner-skill.git ~/.claude/skills/similar-customer-miner
-
-# Codex
-git clone https://github.com/fyaic/similar-customer-miner-skill.git ~/.agents/skills/similar-customer-miner
+python3 -m venv .venv
+.venv/bin/python -m pip install -r /path/to/similar-customer-miner/requirements.txt
+.venv/bin/python /path/to/similar-customer-miner/scripts/tradewind_ops.py doctor
+.venv/bin/python /path/to/similar-customer-miner/scripts/run.py --input customers.csv --output leads.xlsx --mode live --max-results 10 --max-credits 2
 ```
 
-装好后对助手说"帮我挖相似客户"并给出客户清单，它就会自动调用本 skill。
+内部包已内置 key，`doctor` 应显示 `config_source: bundled`。公开源码不含 key：开发者通过 `TRADEWIND_API_KEY` 或本地 `.env` 配置。默认模式为离线 demo；真实任务必须加 `--mode live`。仅做预览用 `--dry-run --output preview.json`，不会调用 API。
 
----
+输出：销售 Excel、费用和状态 `.stats.json`、含完整来源响应的 `.evidence.json`。退出码2代表部分交付，应查看停止原因。账本预算累计计算，缓存请求不再次扣费；超时/计费未知停止后续付费调用。候选联系人和邮箱不自动变成已验证负责人。
 
-架构、数据流、配置项、API 与服务商接入、测试与费用明细见 **[工程文档 ›](ENGINEERING.zh-CN.md)**。
+- [技能说明](SKILL.md)
+- [输入与输出](references/workflow.md)
+- [API、海关核验与费用恢复](references/tradewind.md)
+- [本次升级与验证](docs/TRADEWIND_V2.md)
 
-*License: MIT*
+Trade Wind 内部可用 Hunter 作为数据源，全部费用通过 Trade Wind 账户结算，没有传入旧 Hunter key。产品词查询是默认发现方式；实测 `similar_to` 可能只返回种子。没有进口证据时保留为空，不用相似度推断中国采购额。
+
+开发验证：`python -m pytest -q`。构建内部包：`python scripts/build_skill.py --output /private/path/skill.zip --key-file /private/path/tradewind.env --recipient internal`。构建只选允许的源文件，排除 `.env`、旧密钥、状态、日志和实测客户数据。内部包带凭证，仅限授权内部同事，不提交 GitHub。
+
+旧实现和测试保留用于回溯；历史 `ENGINEERING*`、`docs/pricing.md` 和旧 `scripts/live_smoke.py` 不适用于v2在线路径，且不随升级包分发。主线保留原版，新版在独立分支迭代。

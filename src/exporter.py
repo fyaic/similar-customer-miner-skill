@@ -28,7 +28,7 @@ def export_results(
     path.parent.mkdir(parents=True, exist_ok=True)
 
     rows = [_to_row(c) for c in companies]
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(rows, columns=list(_to_row(SimilarCompany())))
 
     if path.suffix.lower() == ".xlsx":
         with pd.ExcelWriter(path, engine="openpyxl") as writer:
@@ -106,7 +106,7 @@ def _field_notes(company: SimilarCompany, field: str, is_demo: bool) -> Optional
         labels.append("inferred (not a verified decision maker)")
 
     if field == "email" and confidence < 0.5:
-        labels.append("inferred from domain pattern")
+        labels.append("provider guessed email (unverified)" if company.notes and "Provider email status: guessed" in company.notes else "inferred from domain pattern")
 
     if field in ("linkedin", "facebook", "twitter", "youtube") and confidence < 0.6:
         if company.notes and "static public pointers" in company.notes:
