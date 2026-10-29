@@ -24,7 +24,7 @@ tradewind:
 
 补全后国家不匹配或身份冲突隔离。没有国家证据保留空值，不把请求国家当返回事实。人员只选择有匹配公司、个人工作邮箱和采购/运营/企业负责人职位的候选；企业负责人不等于采购负责人。接口最多返回前5个人，只补全最多1个人；这不是穷尽联系人搜索。职位词和邮箱域名不能验证当前任职。
 
-邮箱验证显式开启后，必须匹配响应邮箱，核验时间在过去7天内，valid + deliverable + catch_all=false 才记 verified；未知/缺失状态不通过。Results 独立记录邮箱核验时间、状态、来源。默认 verify_email=false，供应商自报 valid/guessed 都不是独立邮箱核验。quick 实测可能只返回 valid 而缺少可投递/catch-all字段，按未验证处理；可选 power 做更深检查。本轮同一邮箱 quick=valid，power=catch_all，二者都未被错误标成 verified。
+邮箱验证显式开启后，必须匹配响应邮箱，核验时间在过去7天内，valid + deliverable + catch_all=false 才记 verified；未知/缺失状态不通过。Results 独立记录邮箱核验时间、状态、来源。默认 verify_email=false，供应商自报 valid/guessed 都不是独立邮箱核验。quick 可能只返回 valid 而缺少可投递/catch-all字段，按未验证处理；可选 power 做更深检查。两种模式均须满足上述完整条件才标为 verified。
 
 输出：`线索名单`、`Results`、`Summary` 三页 Excel，另支持 CSV/Markdown；统计 `.stats.json`、原始响应及隔离理由 `.evidence.json`。证据含联系方式，按授权范围保管。A/B/C 衡量字段置信度，事实状态为 pending。`scripts/run_report.py leads.xlsx` 生成 Trade Wind 费用和筛选报告。空结果需解释查询/筛除原因，不生成假线索。
 

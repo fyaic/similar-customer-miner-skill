@@ -2,7 +2,7 @@
 
 从客户 CSV/Excel 的产品画像或公司锚点查找相似海外 B2B 公司，输出带来源、评分和待核事项的销售表。在线查询只使用 Trade Wind；不读取或调用原 Apify/Hunter key。内部包内置指定 Trade Wind key，安装时保留 `.credentials/` 隐藏目录。
 
-**发布定位：有边界的内部试用版。** rc2 修复了候选筛选、联系人选择和邮箱验证问题；有自动回归和真实响应回放证据。尚未证明进口商覆盖率、合格采购负责人数量或销售转化优于原版。实际样本与失败案例见 [发布审查](docs/RELEASE_REVIEW.md)，不要只依据测试通过数判断获客效果。
+**使用范围：候选发现与人工复核。** 产品相关性、进口采购身份、联系人任职及采购权需要分别确认；邮箱核验不等于已确认采购联系人。
 
 ## 安装与运行
 
@@ -37,14 +37,10 @@ Excel 保持 `线索名单`、`Results`、`Summary` 三页；另外生成 `.stat
 Trade Wind 内部的 `hunter` 是其数据供应商选择，统一通过 Trade Wind 结算，不需要旧 Hunter key。可选海关仅核验已有公司，不作为 HS 买家发现渠道，也不推断全年采购额。
 
 - [技能执行说明](SKILL.md) · [输入和配置](references/workflow.md)
-- [API、费用与恢复](references/tradewind.md) · [工程说明](ENGINEERING.zh-CN.md)
-- [升级说明](docs/TRADEWIND_V2.md) · [审查与对比](docs/RELEASE_REVIEW.md)
-- [机器可读验证摘要](docs/validation.json) · [包验证](docs/package-validation.json)
+- [API、费用与恢复](references/tradewind.md)
 
-## 维护与分发
+## 分发与校验
 
-开发分支 `codex/tradewind-v2`，原版保留在 main。测试：`python -m pytest -q tests`。业务对比用例：`tests/test_business_acceptance.py`，无网络和费用。真实小样本脚本 `scripts/validate_live.py` 必须显式提供累计预算和已有账本，会产生费用。
+分发包包含本 README、英文说明、SKILL、运行代码、配置、接口参考和输入样例；不包含内部对比评测报告、测试摘要、工程审查文档、客户结果、日志、账本或旧凭证。每个文件的 SHA-256 记录在 `MANIFEST.json`，ZIP 另附 `.sha256` 校验文件。使用 `scripts/verify_package.py` 在本地校验安装文件，无需联网。
 
-内部包构建：`python scripts/build_skill.py --output /private/path/skill.zip --key-file /private/path/tradewind.env --recipient sps`。包附逐文件 SHA-256 清单及 ZIP 校验文件，包含本 README、英文说明、SKILL、工程说明和验证结论；排除客户结果、日志、账本和旧凭证。含 key 包仅发给获准使用账户的内部接收者，不上传 GitHub。rc2 替代 rc1，勿混用旧文档或旧安装目录。
-
-历史模块/旧脚本留作回溯和离线测试，不是 v2 在线入口；`scripts/live_smoke.py` 和旧服务价格不适用于本版。
+内置 key 的包仅发给获准使用账户的接收者，不上传 GitHub。安装时保留 `.credentials/`；rc2 替代 rc1，请解压至新目录，避免混用旧文件。真实任务产生的运行统计和证据用于本次结果复核，不是随包分发的内部评测资料。

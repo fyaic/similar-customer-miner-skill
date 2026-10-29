@@ -13,3 +13,7 @@
 维护验证：`python -m pytest -q tests`；同一 `tests/test_business_acceptance.py` 在 rc1 和 rc2 分别运行。用例针对已知风险，不是随机市场效果基准。真实脚本 `scripts/validate_live.py` 显式收费，必须复用已有账本并设置累计预算。原始客户响应、邮件地址和 key 不入公共仓库。
 
 版本由 `src/tradewind_core/__init__.py` 供运行与打包引用；发布时同步 pyproject、default.yaml、SKILL、双语 README 和审查记录。包生成逐文件 MANIFEST 与内部 DISTRIBUTION 元数据；在独立安装目录验证入口、配置来源、导出和清单。验收依据见 [发布审查](docs/RELEASE_REVIEW.md) 与 [验证摘要](docs/validation.json)。
+
+分发策略：`scripts/build_skill.py` 仅包含接收者所需的代码、配置、接口参考、输入样例、README 和 SKILL；排除整个 docs 目录、工程说明、测试及评测脚本。API目录中的 `live_verified`/`live_scope` 内部探测注记仅在打包时移除，接口契约保持不变。内置 key 只写入 `.credentials/tradewind.env`，MANIFEST/DISTRIBUTION 标记 `distribution_profile: recipient`。内部报告留在仓库和本地验收目录，独立管理。运行版号仍为 rc2；分发范围调整以源码提交和包校验值区分。
+
+构建：`python scripts/build_skill.py --output /private/path/skill.zip --key-file /private/path/tradewind.env --recipient sps`。检查包内 Markdown 本地链接、排除清单、凭证唯一位置和独立目录 doctor；不要把验收目录附入交付包。

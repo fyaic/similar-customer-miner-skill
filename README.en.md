@@ -10,4 +10,6 @@ Default filtering requires product-text corroboration and rechecks country after
 
 Outputs: three-sheet Excel (`线索名单`, `Results`, `Summary`), stats and private raw evidence. Exit 2 means partial completion; exit 0 can still mean no qualified candidates. Local cumulative budgets, exact-query cache and unresolved-billing stops limit cost. Do not delete ledgers to retry uncertain calls. Internal credential-bearing ZIPs are private; Git contains no key.
 
-**Release scope:** tested internal pilot, not demonstrated sales-performance improvement. See [Chinese release review](docs/RELEASE_REVIEW.md), [validation results](docs/validation.json), [package checks](docs/package-validation.json), [workflow](references/workflow.md), and [engineering](ENGINEERING.md). README, SKILL and release reports are bundled together. rc2 supersedes rc1; install into a clean folder.
+**Usage scope:** candidate discovery with human review. Product relevance, importer status, current employment and buying authority require separate confirmation. See [skill instructions](SKILL.md), [workflow](references/workflow.md) and [API reference](references/tradewind.md).
+
+The recipient ZIP includes runtime code, configuration, examples and user instructions. Internal comparisons, evaluation reports, test summaries and engineering documents are excluded. `MANIFEST.json` records file hashes; `scripts/verify_package.py` checks them offline. Internal packages include the assigned Trade Wind key in `.credentials/`; retain that folder. rc2 supersedes rc1; install into a clean folder.

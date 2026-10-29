@@ -194,6 +194,28 @@ def test_internal_package_manifest_and_portable_doctor(tmp_path):
             assert hashlib.sha256(z.read(prefix+name)).hexdigest()==digest
         assert [n for n in names if key.encode() in z.read(n)]==[prefix+'.credentials/tradewind.env']
         assert all('/.env' not in n and '/outputs/' not in n and '/local.yaml' not in n for n in names)
+        assert manifest['distribution_profile'] == 'recipient'
+        assert not any(n.startswith(prefix+'docs/') or n.startswith(prefix+'tests/') or
+                       '/ENGINEERING' in n or '/validate_live.py' in n or '/replay_release.py' in n
+                       for n in names)
+        catalog = z.read(prefix+'references/api-catalog.json').decode()
+        assert 'live_scope' not in catalog and 'live_verified' not in catalog
+        # Removing internal reports must not leave recipient instructions with broken links.
+        import re
+        import posixpath
+        from urllib.parse import unquote, urlsplit
+        for name in names:
+            if not name.endswith('.md'):
+                continue
+            content = z.read(name).decode()
+            assert not any(report in content for report in
+                           ['RELEASE_REVIEW.md', 'validation.json', 'package-validation.json'])
+            for target in re.findall(r'\]\(([^)]+)\)', content):
+                parsed = urlsplit(target)
+                if parsed.scheme or parsed.netloc or not parsed.path:
+                    continue
+                resolved = posixpath.normpath(posixpath.join(posixpath.dirname(name), unquote(parsed.path)))
+                assert resolved in names, (name, target)
         z.extractall(tmp_path/'installed')
     import os
     env={**os.environ,'TRADEWIND_API_KEY':'unrelated-workspace-key'}

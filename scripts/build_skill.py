@@ -34,8 +34,18 @@ def build(output, key_file=None, recipient='internal'):
         for path in sorted((ROOT/folder).rglob('*')):
             if path.is_file() and path.suffix in {'.py','.yaml','.json','.md'} and '__pycache__' not in path.parts and path.name not in {'local.yaml','secrets.yaml'}:
                 files[str(path.relative_to(ROOT))] = path.read_bytes()
-    for name in ['SKILL.md','docs/TRADEWIND_V2.md','docs/validation.json','docs/RELEASE_REVIEW.md','docs/package-validation.json','README.md','README.en.md','ENGINEERING.md','ENGINEERING.zh-CN.md','requirements.txt','LICENSE','scripts/run.py','scripts/verify_package.py','scripts/tradewind_ops.py','scripts/check_output.py','scripts/run_report.py','examples/en_one_anchor.csv','examples/sample_customers.xlsx']:
+    for name in ['SKILL.md','README.md','README.en.md','requirements.txt','LICENSE','scripts/run.py','scripts/verify_package.py','scripts/tradewind_ops.py','scripts/check_output.py','scripts/run_report.py','examples/en_one_anchor.csv','examples/sample_customers.xlsx']:
         files[name] = (ROOT/name).read_bytes()
+    # API contracts are needed at runtime; internal probe annotations are not.
+    catalog = json.loads(files['references/api-catalog.json'])
+    def strip_review_annotations(value):
+        if isinstance(value, dict):
+            return {k: strip_review_annotations(v) for k, v in value.items()
+                    if k not in {'live_verified', 'live_scope'}}
+        if isinstance(value, list):
+            return [strip_review_annotations(v) for v in value]
+        return value
+    files['references/api-catalog.json'] = (json.dumps(strip_review_annotations(catalog), ensure_ascii=False, indent=2)+'\n').encode()
     # Reject secrets even if accidentally placed in an allowlisted source file.
     secret_pattern = re.compile(rb'(?:tw_live_[A-Za-z0-9_-]{12,}|apify_api_[A-Za-z0-9_-]{12,})')
     for name,data in files.items():
@@ -51,13 +61,13 @@ def build(output, key_file=None, recipient='internal'):
         fingerprint=hashlib.sha256(key_text.encode()).hexdigest()[:16]
         identity={'recipient':recipient,'version':VERSION,'key_fingerprint':fingerprint,
                   'package_id':f'similar-customer-miner-{recipient}-{VERSION}-{fingerprint}',
-                  'private':True,'provider':'tradewind'}
+                  'private':True,'provider':'tradewind','distribution_profile':'recipient'}
         files['.credentials/tradewind.env']=('TRADEWIND_API_KEY='+key_text+'\n').encode()
         files['DISTRIBUTION.json']=(json.dumps(identity,ensure_ascii=False,indent=2)+'\n').encode()
         files['README.md'] = (f'# 内部可直接使用包：{recipient}\n\n版本 {VERSION}；内置 Trade Wind 凭证。安装时保留 `.credentials/` 隐藏目录。仅向获准使用此账户的同事分发，不上传公开仓库。\n\n'+files['README.md'].decode()).encode()
     revision = subprocess.run(['git','rev-parse','HEAD'],cwd=ROOT,capture_output=True,text=True)
     status = subprocess.run(['git','status','--porcelain'],cwd=ROOT,capture_output=True,text=True)
-    manifest={'version':VERSION,'source_revision':revision.stdout.strip() if revision.returncode == 0 else None,
+    manifest={'version':VERSION,'distribution_profile':'recipient','source_revision':revision.stdout.strip() if revision.returncode == 0 else None,
               'source_dirty':bool(status.stdout.strip()) if status.returncode == 0 else None,'files':{name:hashlib.sha256(data).hexdigest() for name,data in files.items()}}
     files['MANIFEST.json']=(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n').encode()
     output.parent.mkdir(parents=True,exist_ok=True)
