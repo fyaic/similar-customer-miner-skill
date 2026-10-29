@@ -1,3 +1,5 @@
+> 历史 v1 参考：本页旧服务/价格不适用于 Trade Wind 2.x。当前接入、费用与计费恢复见 [Trade Wind说明](../references/tradewind.md)，价格以实际供应商回执为准。
+
 # Similar Value Customer Miner — 数据源付费说明
 
 > 本文档汇总 Skill 可能涉及的外部数据源/服务的成本、门槛和推荐用法，方便你根据预算选择配置。

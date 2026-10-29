@@ -1,12 +1,20 @@
 {
   "clean_venv_install": true,
-  "portable_entrypoint": true,
+  "manifest_valid": true,
   "doctor_uses_bundled_key": true,
   "unrelated_environment_key_ignored": true,
+  "version_matches": true,
   "offline_preview": true,
-  "offline_excel": true,
-  "offline_markdown": true,
-  "manifest_valid": true,
-  "public_source_secret_scan": true,
-  "network_calls": 0
+  "offline_xlsx": true,
+  "offline_csv": true,
+  "offline_md": true,
+  "portable_report": true,
+  "tamper_detected": true,
+  "key_only_in_credential_file": true,
+  "bundled_documentation": true,
+  "offline_runtime_network_calls": 0,
+  "portable_entrypoint": true,
+  "version": "2.0.0rc2",
+  "date": "2026-10-29",
+  "dependency_install_network_excluded": true
 }

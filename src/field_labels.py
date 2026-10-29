@@ -49,6 +49,11 @@ BASE_LABELS = {
     "datasource": "数据来源",
     "procurement_proxy_notes_value": "采购额proxy说明",
     "email_verified": "邮箱已验证",
+    "email_verification_status": "邮箱核验状态",
+    "email_verified_at": "邮箱核验时间",
+    "email_verification_citation": "邮箱核验来源",
+    "product_match_status": "产品文本匹配状态",
+    "contact_role_fit": "职位关键词匹配(非任职核验)",
     "notes": "备注",
     "all_citations": "全部来源",
 }

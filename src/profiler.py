@@ -57,7 +57,7 @@ def _extract_product_tags(text: Optional[str]) -> List[str]:
     if not text:
         return []
     # Split by common separators and keep meaningful tokens
-    parts = split_values(text, separators=["/", ",", ";", "|", "、", " "])
+    parts = split_values(text, separators=["/", ",", ";", "|", "、", "，"])
     tags: List[str] = []
     for part in parts:
         part = re.sub(r"[^\w\s-]", "", part).strip().lower()

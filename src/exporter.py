@@ -86,6 +86,11 @@ def _to_row(company: SimilarCompany) -> Dict[str, Any]:
 
     row["procurement_proxy_notes_value"] = company.procurement_proxy_notes
     row["email_verified"] = company.email_verified
+    row["email_verification_status"] = company.email_verification_status
+    row["email_verified_at"] = company.email_verified_at
+    row["email_verification_citation"] = company.email_verification_citation
+    row["contact_role_fit"] = company.contact_role_fit
+    row["product_match_status"] = company.product_match_status
     row["notes"] = company.notes
     row["all_citations"] = str(company.all_citations) if company.all_citations else None
     return row
@@ -102,6 +107,10 @@ def _field_notes(company: SimilarCompany, field: str, is_demo: bool) -> Optional
     if is_demo:
         labels.append("demo fallback")
 
+    if field in ("contact_name", "contact_title") and company.all_citations.get('datasource') == 'tradewind':
+        labels.append('candidate; employment/authority unverified')
+    if field == "email" and company.all_citations.get('datasource') == 'tradewind':
+        labels.append('mailbox verified; employment unverified' if company.email_verified else 'mailbox not verified')
     if field in ("contact_name", "contact_title") and confidence < 0.5:
         labels.append("inferred (not a verified decision maker)")
 
@@ -156,7 +165,7 @@ def _write_summary_sheet(workbook, companies: List[SimilarCompany], config: Opti
     ts.header_row(ws, r, ["评级", "判定阈值 (综合置信度)", "含义", "建议动作"])
     r += 1
     grade_rows = [
-        ("A", f"≥ {ga:.2f}", "关键字段齐全且可信（来源明确、置信度高）", "可直接触达"),
+        ("A", f"≥ {ga:.2f}", "关键字段齐全且可信（来源明确、置信度高）", "核实采购角色与邮箱后触达"),
         ("B", f"{gb:.2f} – {ga:.2f}", "主要字段可信，部分信息需人工复核", "复核后触达"),
         ("C", f"< {gb:.2f}", "信息稀疏或待验证（缺联系人/发货量等）", "仅作参考，人工补全后再触达"),
     ]
@@ -262,6 +271,8 @@ def _write_leads_sheet(workbook, companies: List[SimilarCompany]) -> None:
     for c in companies:
         grade_bg = {"A": ts.GRADE_A_BG, "B": ts.GRADE_B_BG}.get(c.grade, ts.GRADE_C_BG)
         email = c.email or ""
+        if email and c.all_citations.get('datasource') == 'tradewind':
+            email += '\n' + ('邮箱已核验；任职待核' if c.email_verified else '未验证邮箱')
         email_secondary = bool(email) and (is_generic_email(email) or (c.email_confidence or 0) < 0.5)
         social = " ".join(u for u in (c.linkedin, c.facebook, c.twitter, c.youtube) if u)
         contact = c.contact_name or ""

@@ -112,7 +112,9 @@ def run_pipeline(input_path: str, output_path: str, config: Dict[str, Any], min_
         enriched = tradewind.mine(profiles, config, output_path)
         # The Trade Wind path already deduplicates by exact name/domain. Fuzzy
         # merges can incorrectly bind one person's email to another company.
-        checked = scoring.score_companies(enriched, profiles, config)
+        from dataclasses import replace
+        scoring_profiles = [replace(p, target_regions=tradewind.target_countries(config)) for p in profiles]
+        checked = scoring.score_companies(enriched, scoring_profiles, config)
         for company in checked:
             company.fact_check_status = "pending"  # API evidence is not human verification
     else:

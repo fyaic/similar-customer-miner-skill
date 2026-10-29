@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "similar-customer-miner"
-version = "2.0.0rc1"
+version = "2.0.0rc2"
 description = "Kimi Code Skill: mine similar B2B buyers from a list of high-value customers"
 readme = "README.md"
 license = {text = "MIT"}

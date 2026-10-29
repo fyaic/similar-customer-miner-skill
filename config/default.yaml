@@ -2,7 +2,7 @@
 
 project:
   name: "similar-customer-miner"
-  version: "2.0.0rc1"
+  version: "2.0.0rc2"
 
 input:
   # Supported formats: xlsx, csv, md
@@ -85,9 +85,13 @@ tradewind:
   max_credits: "2"
   max_enrich: 5
   cache_days: 7
+  require_product_match: true  # Uncorroborated candidates stay in evidence, not the sales sheet
+  discovery_strategy: keywords  # keywords / similar / hybrid
+  max_discovery_queries: 2    # max 3 product terms per query; preview shows the actual scope
   people_source: hunter
   enrich_people: true
   verify_email: false
+  email_verification_mode: quick  # power supplies deeper mailbox diagnostics; may still be catch-all
   customs_enabled: false
   # customs_start / customs_end: YYYY-MM-DD; explicit window required when enabled
   # customs_importer_country / customs_exporter_country: provider reference IDs

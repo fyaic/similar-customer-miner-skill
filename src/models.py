@@ -156,6 +156,11 @@ class SimilarCompany:
     email_citation: Optional[str] = None
     email_confidence: float = 0.0
     email_verified: bool = False
+    email_verification_status: str = 'not_checked'
+    email_verified_at: Optional[str] = None
+    email_verification_citation: Optional[str] = None
+    product_match_status: str = 'unreviewed'
+    contact_role_fit: Optional[bool] = None  # Title heuristic only, not employment verification
 
     # Social links (per-platform citation/confidence)
     linkedin: Optional[str] = None

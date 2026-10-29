@@ -92,13 +92,29 @@ def main(argv=None):
     lines.append(f"# 运行报告 — {p.name}\n")
     lines.append(f"- mode: {stats.get('mode','?')} | 输入行: {stats.get('input_rows','?')} | 输出行: {n}\n")
     lines.append("## 发现有效性")
-    d = stats.get("discovery", {})
-    lines.append(f"- 双通道产出: apify={d.get('apify','?')} web_search={d.get('web_search','?')}")
-    lines.append(f"- 排除种子/龙头: {d.get('excluded_seed','?')} | 去重剔除: {d.get('deduped','?')}")
-    lines.append(f"- **输出中与种子重合: {seed_overlap}** (应为 0)\n")
-    lines.append("## BOL 验证 (验证器, 非发现)")
-    b = stats.get("bol_verify", {})
-    lines.append(f"- attempted={b.get('attempted',0)} verified={b.get('verified',0)} failed={b.get('failed',0)} skipped_cost={b.get('skipped_cost',0)}\n")
+    tw = stats.get("tradewind")
+    if tw:
+        d = tw.get('discovery', {})
+        lines.append(f"- Trade Wind 候选: {tw.get('candidate_count', 0)}；种子排除: {d.get('excluded_seed', 0)}；去重: {d.get('duplicates', 0)}；国家/身份隔离: {d.get('country_mismatch', 0)}")
+        lines.append(f"- 发现候选: {tw.get('discovered_candidates', '?')}；产品未佐证: {tw.get('product_unconfirmed_count', 0)}")
+        lines.append(f"- 公司补全: {tw.get('enriched_companies', '?')}；待补全: {tw.get('enrichment_deferred_count', '?')}")
+        lines.append(f"- 具名候选: {tw.get('named_contacts', 0)}；职位关键词匹配: {tw.get('role_matched_contacts', 0)}；已验证邮箱: {tw.get('verified_mailboxes', 0)}")
+        lines.append(f"- 本次新增已知费用: {tw.get('new_credits_known', '?')} credits；复用请求: {tw.get('reused_requests', 0)}；未决账单: {tw.get('budget', {}).get('unresolved_operations', '?')}")
+        lines.append(f"- 停止原因: {tw.get('stop_reason') or '无'}；来源响应: {stats.get('evidence_file', '见同名 evidence.json')}")
+        lines.append("- API 与职位关键词仅提供候选证据；不证明采购权、任职、采购规模或销售转化。")
+    else:
+        d = stats.get("discovery", {})
+        lines.append(f"- 历史/离线通道: apify={d.get('apify','?')} web_search={d.get('web_search','?')}")
+        lines.append(f"- 排除种子/龙头: {d.get('excluded_seed','?')} | 去重剔除: {d.get('deduped','?')}")
+    lines.append(f"- 输出中与提供的种子名单重合: {seed_overlap}" if seeds else "- 未提供独立种子名单；此报告不单独验证种子重合。")
+    evidence_path = p.with_suffix('.evidence.json')
+    if tw and evidence_path.exists():
+        evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
+        rejected = evidence.get('quarantined', [])
+        if rejected:
+            lines.append("## 未进入销售页的候选（保留复核）")
+            for item in rejected:
+                lines.append(f"- {item.get('company', '?')}: {item.get('reason', 'unknown')}")
     lines.append("## 字段覆盖")
     for f, c in coverage.items():
         lines.append(f"- {f}: {c}/{n} ({c/n:.0%})" if n else f"- {f}: 0")
@@ -108,7 +124,7 @@ def main(argv=None):
         lines.append(f"- priority_score: min={prio.get('min',0):.3f} mean={prio.get('mean',0):.3f} max={prio.get('max',0):.3f}")
     lines.append("\n## 采购额诚实性")
     lines.append(f"- estimated_shipping_spend 填充: {est_filled} | 其中带 proxy 标注: {proxy_ok} ({(proxy_ok/est_filled if est_filled else 1):.0%})")
-    lines.append(f"- customs_china_purchase 填充: {customs_filled} (本轮无海关源, 应≈0)\n")
+    lines.append(f"- customs_china_purchase 填充: {customs_filled} (非零值需核对真实海关来源)\n")
     lines.append("## 数据来源分布")
     lines.append(f"- {ds}\n")
     if api:

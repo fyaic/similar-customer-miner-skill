@@ -11,6 +11,7 @@ import re
 from urllib.parse import urlparse
 
 from src.models import SimilarCompany
+from src import scoring
 from src.utils import normalize_company_name
 from src.tradewind_core.api import Client, estimate, prepare
 from src.tradewind_core.security import settings, private_json, redact
@@ -123,7 +124,7 @@ def apply_company(company, row, source):
         value = social.get(field+'_url') or social.get(field) if isinstance(social, dict) else None
         if isinstance(value, str) and value.startswith(('http://','https://')):
             put(company, field, value, source, .5)
-    found = [e for e in emails(p) if not current or domain(e.split('@')[-1]) == (current or incoming)]
+    found = [e for e in emails(p) if (current or incoming) and domain(e.split('@')[-1]) == (current or incoming)]
     if found and not company.email:
         put(company, 'email', found[0], source, .5)
         note(company, 'Company email channel; not a verified person or verified mailbox')
@@ -150,10 +151,28 @@ def person_matches(person, company):
     return bool(pn and normalize_company_name(str(pn)) == normalize_company_name(company.company_name))
 
 
+def role_rank(person):
+    """Title heuristics prioritize relevant candidates, never certify authority."""
+    title = str(person.get('current_title') or person.get('title') or person.get('position') or '').lower()
+    if re.search(r'\b(hr|human resources|recruit\w*|talent|marketing|sales|accountant|finance|investor relations|editor|journalist|writer|legal|engineer\w*)\b', title):
+        return -1
+    if re.search(r'\b(procure\w*|purchas\w*|sourcing|buyer|buying|supply chain|import\w*|merchandis\w*)\b|采购|供应链', title):
+        return 3
+    if re.search(r'\b(operations|logistics)\b|运营|物流', title):
+        return 2
+    if re.search(r'\b(ceo|coo|president|owner|founder|managing director|general manager|executive director)\b|总经理', title):
+        return 1
+    return 0
+
+
 def apply_person(company, person, source):
     # Empty Hunter rows and organization channels cannot become named decision-makers.
     if not person_matches(person, company):
         note(company, 'Person/company association missing or conflicting; not merged')
+        return False
+    rank = role_rank(person)
+    if rank <= 0:
+        note(company, 'Non-buying or unknown role retained in raw evidence, not selected as main contact')
         return False
     name = person_identity(person)
     personal_emails = [e for e in emails(person) if not generic(e) and domain(e.split('@')[-1]) == domain(company.website)]
@@ -163,6 +182,8 @@ def apply_person(company, person, source):
     if not personal_emails:
         note(company, 'Named person lacks matching personal work email; retained in evidence without binding company email')
         return False
+    company.contact_role_fit = True if rank >= 2 else None
+    note(company, 'Contact role: '+('procurement/operations title match; authority unverified' if rank >= 2 else 'executive fallback; buying role unverified' if rank == 1 else 'unknown; manual role review required'))
     put(company, 'contact_name', name, source, .6)
     put(company, 'contact_title', person.get('current_title') or person.get('title') or person.get('position'), source, .6)
     email_status = 'unknown'
@@ -214,6 +235,8 @@ class Session:
             self.stop_reason = str(exc)
             self.events.append({'operation':name,'state':'deferred','reason':str(exc)})
             return None
+        saved = self.store.get(result['operation_id'])
+        result['observed_at'] = saved['created'] if saved else None
         self.events.append({'operation':name, **result})
         if result.get('reused'):
             self.reused += 1
@@ -230,23 +253,79 @@ class Session:
                 'operations':self.events,'warning':'Local planning budget, not provider hard cap; results are unreviewed candidates'}
 
 
-def discovery_body(profile, cfg, limit):
-    anchor = profile.customer_name or profile.industry_leader
-    company = {}
-    if profile.product_tags:
-        company['keywords'] = {'include': profile.product_tags[:3]}
-    elif anchor:
-        d = domain(anchor)
-        company['domains' if d else 'names'] = [d or anchor]
-    elif profile.product_tags:
-        company['keywords'] = {'include': profile.product_tags[:5]}
-    else:
-        raise ValueError('Seed needs a company name/domain, industry leader, or product keywords')
+def product_match(company, profile):
+    """Conservative textual corroboration; no import/buyer inference from a hit."""
+    if not profile.product_tags:
+        return 'anchor_only'
+    text = ' '.join([company.main_products or '', *company.industry_tags]).lower()
+    if not text.strip():
+        return 'unknown'
+    normalize = lambda word: word[:-1] if len(word) > 3 and word.endswith('s') else word
+    words = {normalize(w) for w in re.findall(r'[\w]+', text)}
+    for tag in profile.product_tags:
+        tokens = {normalize(w) for w in re.findall(r'[\w]+', tag.lower())}
+        if tokens and tokens <= words:
+            return 'matched'
+    return 'unconfirmed'
+
+
+def target_countries(cfg):
     countries = list(dict.fromkeys(iso_country(x) for x in cfg.get('pipeline',{}).get('target_countries',['US'])))
-    if any(not re.fullmatch('[A-Z]{2}', x) for x in countries):
+    if not countries or any(not re.fullmatch('[A-Z]{2}', x) for x in countries):
         raise ValueError('target_countries must contain ISO2 codes')
-    return {'company':company,'similar_to':bool(anchor and not profile.product_tags), 'location':{'country_code':countries},
-            'page':1,'per_page':min(100,limit), 'waterfall':{'mode':'first_match','source_order':['hunter']}}
+    return countries
+
+
+def discovery_requests(profile, cfg, limit):
+    opts = cfg.get('tradewind', {})
+    anchor = profile.customer_name or profile.industry_leader
+    strategy = opts.get('discovery_strategy', 'keywords')
+    cap = int(opts.get('max_discovery_queries', 2))
+    bodies = []
+    if profile.product_tags and strategy != 'similar':
+        terms = list(dict.fromkeys(profile.product_tags))
+        for offset in range(0, len(terms), 3):
+            bodies.append({'company': {'keywords': {'include': terms[offset:offset+3]}}, 'similar_to': False})
+    if anchor and (not bodies or strategy == 'hybrid'):
+        d = domain(anchor)
+        anchor_body = {'company': {'domains' if d else 'names': [d or anchor]}, 'similar_to': True}
+        # In hybrid mode reserve a slot for the anchor rather than silently drop it.
+        bodies = [*bodies[:max(0, cap-1)], anchor_body] if bodies else [anchor_body]
+    if not bodies:
+        if profile.hs_codes:
+            raise ValueError('HS-only input needs product keywords or a company anchor; customs verification does not discover buyers')
+        raise ValueError('Seed needs a company name/domain, industry leader, or product keywords')
+    countries = target_countries(cfg)
+    return [{**body, 'location': {'country_code': countries}, 'page': 1, 'per_page': min(100, limit),
+             'waterfall': {'mode': 'first_match', 'source_order': ['hunter']}} for body in bodies[:cap]]
+
+
+def discovery_body(profile, cfg, limit):
+    """Compatibility helper; preview/mine use the complete bounded request list."""
+    return discovery_requests(profile, cfg, limit)[0]
+
+
+def apply_verification(company, verified):
+    payload = verified['response']
+    data = payload.get('result') or payload.get('data') or {}
+    if not isinstance(data, dict):
+        data = {}
+    subject_matches = str(data.get('email') or '').strip().lower() == str(company.email or '').lower()
+    checked_at = verified.get('observed_at')
+    fresh = False
+    if checked_at:
+        age = (datetime.now(timezone.utc)-datetime.fromisoformat(checked_at)).total_seconds()
+        fresh = 0 <= age <= 7*86400
+    company.email_verification_status = str(data.get('status') or 'unknown') if subject_matches else 'subject_mismatch'
+    company.email_verified = bool(subject_matches and fresh and data.get('status') == 'valid'
+        and data.get('is_deliverable') is True and data.get('is_catch_all') is False)
+    company.email_verification_citation = citation(verified)
+    company.email_verified_at = checked_at
+    if company.email_verified:
+        company.email_confidence = .85
+    elif subject_matches and data.get('status') == 'invalid':
+        company.email_confidence = .1
+    note(company, 'Mailbox check: '+company.email_verification_status+'; catch_all='+str(data.get('is_catch_all'))+'; does not verify employment')
 
 
 def mine(profiles, config, output_path, send=None):
@@ -256,8 +335,11 @@ def mine(profiles, config, output_path, send=None):
     if not 1 <= limit <= 100:
         raise ValueError('max_results_per_customer must be 1..100')
     # Validate before creating any paid operations.
-    bodies = [discovery_body(p, config, limit) for p in profiles]
     validate_options(opts)
+    bodies = [(p, body) for p in profiles for body in discovery_requests(p, config, limit)]
+    # Scores must use the actual requested market, not the profiler's legacy US default.
+    from dataclasses import replace
+    scoring_profiles = [replace(p, target_regions=target_countries(config)) for p in profiles]
     session = Session(config, send)
     companies = []
     excluded = {normalize_company_name(n) for p in profiles for n in [p.customer_name,p.industry_leader,*p.seed_exclude_names] if n}
@@ -265,7 +347,7 @@ def mine(profiles, config, output_path, send=None):
     names, domains = set(), set()
     stats = {'excluded_seed':0,'duplicates':0,'country_mismatch':0,'identity_missing':0}
     try:
-        for profile, body in zip(profiles, bodies):
+        for profile, body in bodies:
             result = session.call('company.search', body)
             if not result:
                 break
@@ -291,8 +373,16 @@ def mine(profiles, config, output_path, send=None):
                 names.add(nk)
                 if dk: domains.add(dk)
                 companies.append(company)
-                if sum(c.source_seed==profile.customer_id for c in companies)>=limit:
-                    break
+        scoring.score_companies(companies, scoring_profiles, config)
+        # Bound each seed after merging discovery routes, then spend enrichment on fit.
+        selected = []
+        for company in sorted(companies, key=lambda c: -c.fit_score):
+            if sum(c.source_seed == company.source_seed for c in selected) < limit:
+                selected.append(company)
+        companies = selected
+        quarantined = []
+        profile_by_id = {p.customer_id: p for p in profiles}
+        enriched_ids = set()
         for company in companies[:int(opts.get('max_enrich', 5))]:
             d = domain(company.website)
             if not d:
@@ -300,15 +390,27 @@ def mine(profiles, config, output_path, send=None):
                 continue
             detail = session.call('company.enrich',{'identity':{'domains':[d]},'waterfall':{'mode':'first_match','source_order':['hunter']}})
             if detail:
+                enriched_ids.add(id(company))
                 for row in unpack(detail['response'],'company'):
                     apply_company(company,row,citation(detail))
+            if (company.country and iso_country(company.country) not in target_countries(config)) or 'Country conflict' in (company.notes or '') or 'Company domain conflict' in (company.notes or ''):
+                stats['country_mismatch'] += 1
+                quarantined.append({'company': company.company_name, 'reason': company.notes, 'source': company.all_citations})
+                continue
+            company.product_match_status = product_match(company, profile_by_id[company.source_seed])
+            if opts.get('require_product_match', True) and company.product_match_status in {'unknown', 'unconfirmed'}:
+                note(company, 'Product relevance not corroborated; contact enrichment skipped')
+                continue
             if opts.get('customs_enabled') and not session.stop_reason:
                 verify_customs(company, session, opts)
             result = session.call('people.search',{'company':{'domains':[d]},'page':1,'per_page':5,
                 'waterfall':{'mode':'first_match','source_order':[opts.get('people_source','hunter')]}})
             if result:
                 person_enrich_used = 0
-                for person in unpack(result['response'],'people'):
+                for person in sorted(unpack(result['response'],'people'), key=role_rank, reverse=True):
+                    if role_rank(person) <= 0:
+                        note(company, 'Non-buying or unknown role retained in raw evidence, not selected as main contact')
+                        continue
                     if not person_matches(person,company) or not person_identity(person):
                         apply_person(company,person,citation(result));continue
                     if apply_person(company,person,citation(result)):
@@ -324,26 +426,38 @@ def mine(profiles, config, output_path, send=None):
                         if company.contact_name:
                             break
             if opts.get('verify_email',False) and company.email:
-                verified = session.call('email.verify',{'type':'single','mode':'quick','email':company.email})
+                verified = session.call('email.verify',{'type':'single','mode':opts.get('email_verification_mode', 'quick'),'email':company.email})
                 if verified:
-                    data = verified['response'].get('data') or {}
-                    company.email_verified = data.get('status')=='valid' and data.get('is_deliverable') is True and data.get('is_catch_all') is not True
-                    if company.email_verified:
-                        company.email_confidence = .85
-                    elif data.get('status') == 'invalid':
-                        company.email_confidence = .1
-                    note(company,'Email verification status: '+str(data.get('status','unknown'))+'; does not verify employment')
+                    apply_verification(company, verified)
             if session.stop_reason:
                 break
+        discovered_count = len(companies)
+        product_unconfirmed = 0
+        for company in companies:
+            company.product_match_status = product_match(company, profile_by_id[company.source_seed])
+            if opts.get('require_product_match', True) and company.product_match_status in {'unknown', 'unconfirmed'}:
+                product_unconfirmed += 1
+                quarantined.append({'company': company.company_name, 'reason': 'Product relevance '+company.product_match_status,
+                                    'source': company.all_citations})
+        deferred_count = sum(id(c) not in enriched_ids for c in companies)
+        rejected = {item['company'] for item in quarantined}
+        companies = [c for c in companies if c.company_name not in rejected]
         report = session.report()
+        report['quarantined'] = quarantined
+        report['enriched_companies'] = len(enriched_ids)
+        report['role_matched_contacts'] = sum(c.contact_role_fit is True for c in companies)
+        report['discovery_requests_planned'] = len(bodies)
+        report['discovered_candidates'] = discovered_count
+        report['product_unconfirmed_count'] = product_unconfirmed
+        report['qualification'] = 'Product text corroboration only; import activity and procurement authority remain unverified'
         report['discovery'] = stats
         report['candidate_count'] = len(companies)
-        report['enrichment_deferred_count'] = max(0,len(companies)-int(opts.get('max_enrich',5)))
+        report['enrichment_deferred_count'] = deferred_count
         report['named_contacts'] = sum(bool(c.contact_name) for c in companies)
         report['verified_mailboxes'] = sum(c.email_verified for c in companies)
         evidence_path = Path(output_path).with_suffix('.evidence.json')
         private_json(evidence_path, report)
-        config.setdefault('_run_stats',{})['tradewind'] = {k:v for k,v in report.items() if k!='operations'}
+        config.setdefault('_run_stats',{})['tradewind'] = {k:v for k,v in report.items() if k not in {'operations', 'quarantined'}}
         config['_run_stats']['evidence_file'] = str(evidence_path)
         for company in companies:
             if not company.hs_codes:
@@ -354,6 +468,12 @@ def mine(profiles, config, output_path, send=None):
 
 
 def validate_options(opts):
+    if opts.get('email_verification_mode', 'quick') not in {'quick', 'power'}:
+        raise ValueError('email_verification_mode must be quick or power')
+    if opts.get('discovery_strategy', 'keywords') not in {'keywords', 'similar', 'hybrid'}:
+        raise ValueError('discovery_strategy must be keywords, similar, or hybrid')
+    if not 1 <= int(opts.get('max_discovery_queries', 2)) <= 4:
+        raise ValueError('max_discovery_queries must be 1..4')
     if opts.get('people_source', 'hunter') not in {'hunter','apollo','rocketreach'}:
         raise ValueError('people_source must be hunter, apollo, or rocketreach')
     if not 0 <= int(opts.get('max_enrich',5)) <= 100:
@@ -404,9 +524,9 @@ def preview(profiles, config, max_results=None):
         raise ValueError('max_results_per_customer must be 1..100')
     requests = []
     for profile in profiles:
-        body = discovery_body(profile,config,limit)
-        requests.append({'seed':profile.customer_id,'operation':'company.search','body':body,
-                         'reserve':str(estimate(prepare('company.search',body)))})
+        for body in discovery_requests(profile,config,limit):
+            requests.append({'seed':profile.customer_id,'operation':'company.search','body':body,
+                             'reserve':str(estimate(prepare('company.search',body)))})
     return {'mode':'preview','network_calls':0,'requests':requests,
             'max_credits':str(opts.get('max_credits','2')),'max_enrich':opts.get('max_enrich',5),
             'next_steps':'Company details, optional customs, people search, identity-based people enrich, optional email verification',

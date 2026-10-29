@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from src.tradewind_core import VERSION
 from src.tradewind_core.security import settings, redact
 from src.tradewind_core.store import Store
 from src.tradewind_core.api import Client
@@ -23,7 +24,7 @@ def main(argv=None):
     r.add_argument('--evidence',required=True,help='Provider receipt/log reference; never guess zero')
     a=p.parse_args(argv);cfg=settings(a.env_file)
     if a.command=='doctor':
-        print(json.dumps({'version':'2.0.0rc1','key_configured':bool(cfg['key']),
+        print(json.dumps({'version':VERSION,'key_configured':bool(cfg['key']),
             'config_source':cfg['config_source'],'distribution':cfg['distribution'],
             'legacy_credentials_used':False,'network_calls':0},ensure_ascii=False,indent=2));return 0
     ns=hashlib.sha256(cfg['key'].encode()).hexdigest()[:16] if cfg['key'] else 'offline'

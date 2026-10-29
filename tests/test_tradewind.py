@@ -18,7 +18,7 @@ from scripts.build_skill import build
 @pytest.fixture
 def config(tmp_path, monkeypatch):
     monkeypatch.setenv('TRADEWIND_API_KEY','fixture-key')
-    return {'runtime':{'mode':'live'},'tradewind':{'state_dir':str(tmp_path/'state'),'max_credits':'3','max_enrich':1},
+    return {'runtime':{'mode':'live'},'tradewind':{'state_dir':str(tmp_path/'state'),'max_credits':'3','max_enrich':1,'require_product_match':False},
             'pipeline':{'target_countries':['US'],'max_results_per_customer':3}}
 
 
@@ -212,7 +212,7 @@ def test_public_package_has_no_credentials(tmp_path):
 
 def test_provider_guessed_email_stays_low_confidence():
     c=SimilarCompany(company_name='Buyer',website='https://buyer.example')
-    assert tw.apply_person(c,{'first_name':'Alex','company_domain':'buyer.example',
+    assert tw.apply_person(c,{'first_name':'Alex','company_domain':'buyer.example','current_title':'Purchasing Manager',
         'emails':[{'email':'alex@buyer.example','status':'guessed','confidence':50}]},'fixture')
     assert c.email_confidence==.35 and not c.email_verified
     assert 'guessed' in c.notes

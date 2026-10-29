@@ -109,7 +109,7 @@ class Store:
                     raise ValueError('Operation id already belongs to a different request')
                 return previous
             # Unknown network outcomes block new chargeable work until reconciled.
-            if billable and self.db.execute("SELECT 1 FROM operations WHERE state IN ('unknown','inflight') OR (billing_known=0 AND state!='pending') LIMIT 1").fetchone():
+            if billable and self.db.execute("SELECT 1 FROM operations WHERE state IN ('unknown','inflight','pending') OR billing_known=0 LIMIT 1").fetchone():
                 raise ValueError('Reconcile unresolved billing before starting another paid operation')
             if billable and Decimal(self.budget()['available']) < Decimal(str(reserve)):
                 raise ValueError('Local budget exhausted; adjust scope or budget')

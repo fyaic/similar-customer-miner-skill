@@ -82,7 +82,7 @@ def _priority_score(company: SimilarCompany) -> float:
 
 def _shipments_from_frequency(freq: Optional[str]) -> int:
     """SimilarCompany carries shipment_frequency as a string like '120 shipments'."""
-    if not freq:
+    if not freq or "sampled customs records" in str(freq).lower():
         return 0
     import re
     m = re.search(r"\d+", str(freq))
@@ -202,11 +202,11 @@ def _text_similarity(a: str, b: str) -> float:
 
 
 def _region_similarity(country: Optional[str], regions: List[str]) -> float:
-    if not country:
-        return 0.3
-    if country.upper() in {"US", "USA", "United States"}:
-        return 1.0
-    return 0.2
+    if not country or not regions:
+        return 0.0
+    aliases = {'USA': 'US', 'UNITED STATES': 'US', 'UK': 'GB', 'UNITED KINGDOM': 'GB', 'CANADA': 'CA'}
+    normalized = lambda c: aliases.get(str(c).upper(), str(c).upper())
+    return 1.0 if normalized(country) in {normalized(r) for r in regions} else 0.0
 
 
 def _bucket_similarity(a: Optional[str], b: Optional[str]) -> float:
@@ -216,7 +216,7 @@ def _bucket_similarity(a: Optional[str], b: Optional[str]) -> float:
 
 
 def _freq_bucket(text: Optional[str]) -> Optional[str]:
-    if not text:
+    if not text or "sampled customs records" in text.lower():
         return None
     import re
     match = re.search(r"\d+", text)
