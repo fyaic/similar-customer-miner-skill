@@ -1,8 +1,8 @@
-# Similar Customer Miner · Trade Wind 2.0.0rc3
+# Similar Customer Miner · Trade Wind 2.0.0rc4
 
 An internal pilot skill for finding product-related overseas B2B company candidates from CSV/Excel customer profiles. Live mode uses Trade Wind only; legacy Apify/Hunter credentials are disabled. Provider selection `hunter` means Trade Wind's upstream source, not a separate Hunter credential.
 
-Python 3.10+ is required. Extract the entire folder including `.credentials/`, install `requirements.txt`, then run `scripts/tradewind_ops.py doctor`. It should report `config_source: bundled` for the internal ZIP. Run `scripts/run.py --input customers.csv --output preview.json --dry-run` before `scripts/run.py --input customers.csv --output leads.xlsx --mode live --max-results 10 --max-credits 2`. Use absolute script paths outside the skill folder. Default demo mode is synthetic and must not be delivered as real leads.
+Python 3.10+ is required. Extract the entire folder including `.credentials/`, install `requirements.txt`, then run `scripts/tradewind_ops.py doctor`. It should report `config_source: bundled` for the internal ZIP. Run `scripts/run.py --input customers.csv --output preview.json --dry-run` before `scripts/run.py --input customers.csv --output leads.xlsx --mode live --max-results 10 --max-credits 2`. Use absolute script paths outside the skill folder. Execution requires an explicit --mode live/demo/test; only dry-run may omit it. Demo/test are synthetic and cannot be delivered as real leads.
 
 Preserve product phrases such as `hand tools`. Default discovery uses at most two queries per seed, three phrases per query; optional hybrid discovery also uses the company anchor. HS-only discovery is unsupported. Customs is optional verification of existing companies, not buyer discovery. Revenue and purchase profile fields are not automatically mapped to search filters.
 
@@ -12,4 +12,12 @@ Outputs: live four-sheet Excel (`线索名单`, `待复核`, `Results`, `Summary
 
 **Usage scope:** candidate discovery with human review. Product relevance, importer status, current employment and buying authority require separate confirmation. See [skill instructions](SKILL.md), [workflow](references/workflow.md) and [API reference](references/tradewind.md).
 
-The recipient ZIP includes runtime code, configuration, examples and user instructions. Internal comparisons, evaluation reports, test summaries and engineering documents are excluded. `MANIFEST.json` records file hashes; `scripts/verify_package.py` checks them offline. Internal packages include the assigned Trade Wind key in `.credentials/`; retain that folder. rc3 supersedes rc2; install into a clean folder.
+The recipient ZIP includes runtime code, configuration, examples and user instructions. Internal comparisons, evaluation reports, test summaries and engineering documents are excluded. `MANIFEST.json` records file hashes; `scripts/verify_package.py` checks them offline. Internal packages include the assigned Trade Wind key in `.credentials/`; retain that folder. rc4 supersedes rc3; install into a clean folder.
+
+## Execution coverage in rc4
+
+New acquisition work must execute Trade Wind business APIs. Company research, health checks and replay are insufficient. People search defaults to Apollo with purchasing/supply-chain/operations/executive title filters, one company domain per request and at most one person enrichment per company. Company APIs still use Hunter through Trade Wind; no legacy provider keys.
+
+The .audit.json tracks each planned seed query and selected company. Product-review holds, missing domains, enrichment caps, missing receipts and billing stops return exit 2. Exit 0 requires complete scoped coverage and new real business receipts; --allow-cached explicitly accepts complete cached coverage without claiming a new online case. Historical receipts without transport provenance remain unproven. Empty results establish execution, not lead quality. Run scripts/audit_run.py leads.evidence.json --ledger /path/to/account/state.sqlite3 to compare the original ledger with request/response records. This is a local audit, not provider-signed attestation.
+
+Mailbox safe/role_account is normalized to valid only when deliverable and safe-to-send are both true. Verification also requires the matching address, a recent receipt, explicitly false catch-all and no explicit unsafe flag. Raw status and tri-state catch-all remain separate; a role mailbox never proves a named decision-maker.

@@ -89,6 +89,8 @@ def _to_row(company: SimilarCompany) -> Dict[str, Any]:
     row["procurement_proxy_notes_value"] = company.procurement_proxy_notes
     row["email_verified"] = company.email_verified
     row["email_verification_status"] = company.email_verification_status
+    for field in ("email_verification_raw_status", "email_is_catch_all", "email_is_safe_to_send"):
+        row[field] = getattr(company, field)
     row["email_verified_at"] = company.email_verified_at
     row["email_verification_citation"] = company.email_verification_citation
     row["contact_role_fit"] = company.contact_role_fit
@@ -159,6 +161,12 @@ def _write_summary_sheet(workbook, companies: List[SimilarCompany], config: Opti
     if '_review_queue' in config:
         stats.extend([('待复核公司（未计入线索）', len(config['_review_queue'])),
                       ('有海关样本（非采购意向）', sum(c.import_evidence_status == 'matched_sample' for c in companies))])
+    audit = config.get("_run_stats", {}).get("tradewind", {}).get("execution_audit")
+    if audit:
+        stats.extend([("执行审计", audit["classification"]),
+                      ("范围内公司覆盖", f"{audit['companies_complete']}/{audit['companies_planned']}"),
+                      ("新增真实业务回执", audit["new_live_receipts"]),
+                      ("缓存业务回执", audit["cached_receipts"])])
     r = 3
     for label, val in stats:
         ts.data_cell(ws, r, 1, label)

@@ -58,7 +58,7 @@ def main():
             cfg = load_config(load_local=False)
             _apply_runtime_mode(cfg, 'live')
             cfg['pipeline'].update(target_countries=[country], max_results_per_customer=3)
-            cfg['tradewind'].update(state_dir=str(Path(temp)/case), max_credits='100', max_enrich=enrich, verify_email=not a.company_only, enrich_people=not a.company_only)
+            cfg['tradewind'].update(state_dir=str(Path(temp)/case), max_credits='100', max_enrich=enrich, people_source='hunter', people_job_titles=[], verify_email=not a.company_only, enrich_people=not a.company_only)
             if a.product_evidence_file:
                 cfg['tradewind']['product_evidence_file'] = a.product_evidence_file
             if a.no_contact_search:

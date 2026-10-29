@@ -2,7 +2,7 @@
 
 project:
   name: "similar-customer-miner"
-  version: "2.0.0rc3"
+  version: "2.0.0rc4"
 
 input:
   # Supported formats: xlsx, csv, md
@@ -90,7 +90,9 @@ tradewind:
   contact_search_enabled: true # false: company qualification only, no people/mailbox calls
   discovery_strategy: keywords  # keywords / similar / hybrid
   max_discovery_queries: 2    # max 3 product terms per query; preview shows the actual scope
-  people_source: hunter
+  people_source: apollo
+  people_per_page: 5
+  people_job_titles: [purchasing, procurement, sourcing, supply chain, operations, owner, president]
   enrich_people: true
   verify_email: false
   email_verification_mode: quick  # power supplies deeper mailbox diagnostics; may still be catch-all

@@ -4,12 +4,12 @@
 
 - [公司搜索](https://docs.trade-wind.co/442720054e0.md)：`company.keywords.include` / `company.names` / `company.domains`；ISO2 位于 `location.country_code`。
 - [公司详情](https://docs.trade-wind.co/442720055e0.md)：`identity.domains`；返回 `company.profile`。
-- [人员搜索](https://docs.trade-wind.co/442720056e0.md)：`company.domains`；返回 `people`。默认 Hunter，也可配置 Apollo/RocketReach。
+- [人员搜索](https://docs.trade-wind.co/442720056e0.md)：`company.domains`；返回 `people`。默认 Apollo，job.job_titles 为采购/供应链/运营/负责人职位词；每次只有一个公司域名，避免跨公司错配。也可配置 Hunter/RocketReach。
 - [人员详情](https://docs.trade-wind.co/442720057e0.md)：使用搜索返回的 `source/source_id`，关闭电话解锁。
-- [邮箱验证](https://docs.trade-wind.co/442720058e0.md)：`type=single, mode=quick/power`；解析官方 `result`（兼容 `data`），响应邮箱须与请求一致，核验不超过7天；valid、可投递且 `is_catch_all` 明确 false 才标记 verified，仍不证明身份。
+- [邮箱验证](https://docs.trade-wind.co/442720058e0.md)：`type=single, mode=quick/power`；解析官方 `result`（兼容 `data`），响应邮箱须与请求一致，核验不超过7天；valid、可投递且 `is_catch_all` 明确 false，且无明确不安全标志才标记 verified；safe/role_account 只有可投递和安全发送都为true才归一为valid，原始状态独立保留，仍不证明身份。
 - [海关搜索](https://docs.trade-wind.co/447390392e0.md)：根据买家名查询，响应 `records`；二次核对买家名/域名，只合并匹配记录。
 
-费用快照见 `prices.json`（2026-10-27；非合同承诺）：Hunter公司搜索、公司详情、人员搜索/详情各预留0.24 credits；单邮箱验证0.1；海关搜索按每行0.14，最少10行预留1.4。实际计费以 `meta.billing` 为准。无结果、超时不等于零费用。
+费用快照见 `prices.json`（2026-10-27；非合同承诺）：Hunter公司搜索、公司详情、人员搜索/详情各预留0.24 credits；默认Apollo人员搜索/详情各预留0.52 credits（不解锁电话）；单邮箱验证0.1；海关搜索按每行0.14，最少10行预留1.4。实际计费以 `meta.billing` 为准。无结果、超时不等于零费用。
 
 ## 海关核验
 

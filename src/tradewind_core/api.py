@@ -289,7 +289,7 @@ class Client:
             if state=='completed' and billable and charged is None:state='unknown'
             request_id=payload.get('request_id') if isinstance(payload,dict) else None
             task_id=(payload.get('task_id') or payload.get('taskId') or (payload.get('data',{}).get('taskId') if isinstance(payload.get('data'),dict) else None)) if isinstance(payload,dict) else None
-            self.store.finish(op_id,(('completed' if 200<=code<300 else 'failed') if parent else state),safe,0 if parent else charged,request_id,task_id,note='HTTP '+str(code))
+            self.store.finish(op_id,(('completed' if 200<=code<300 else 'failed') if parent else state),safe,0 if parent else charged,request_id,task_id,note='HTTP '+str(code)+'; transport='+('live' if self.send is transport else 'injected'))
             if parent and state in ('completed','failed','partial'):
                 # Query billing is the cumulative parent-task charge, not a second charge.
                 self.store.finish(settles,state,json.loads(parent['response'] or '{}'),charged,note='settlement via '+op_id,cumulative=True)

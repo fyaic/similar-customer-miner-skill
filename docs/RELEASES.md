@@ -3,6 +3,7 @@
 | 版本 | 标签/基线 | 分支 | 说明 |
 |---|---|---|---|
 | 2.0.0rc2 | v2.0.0rc2 / 4d38dfe | codex/tradewind-v2 | 已固定的接入与接收者分发基线；历史评测见 releases/2.0.0rc2 |
+| 2.0.0rc4 | v2.0.0rc4 | codex/tradewind-v2-rc4 | 真实执行门槛、逐公司审计、Apollo职位检索、邮箱状态兼容 |
 | 2.0.0rc3 | v2.0.0rc3 | codex/tradewind-v2-rc3 | 可见复核队列、产品补证恢复、资格字段拆分 |
 
 运行版本来自 src/tradewind_core/__init__.py，发布时同步pyproject、default.yaml、SKILL、双语README、工程说明及当前评测。旧报告按版本归档，不改写成新版本结果。源码在Git；带key包只保存在本地受限目录，不作为GitHub发布附件。

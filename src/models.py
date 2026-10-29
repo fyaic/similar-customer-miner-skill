@@ -157,6 +157,9 @@ class SimilarCompany:
     email_confidence: float = 0.0
     email_verified: bool = False
     email_verification_status: str = 'not_checked'
+    email_verification_raw_status: str = 'not_checked'
+    email_is_catch_all: Optional[bool] = None
+    email_is_safe_to_send: Optional[bool] = None
     email_verified_at: Optional[str] = None
     email_verification_citation: Optional[str] = None
     product_match_status: str = 'unreviewed'

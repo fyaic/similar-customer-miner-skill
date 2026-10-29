@@ -39,7 +39,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--input", required=True, help="Path to customer list (xlsx/csv)")
     p.add_argument("--output", required=True, help="Path for output file")
     p.add_argument("--config", default=None, help="Path to config YAML")
-    p.add_argument("--mode", default="demo", choices=["demo", "test", "live"], help="Runtime mode")
+    p.add_argument("--mode", default=None, choices=["demo", "test", "live"], help="Runtime mode")
+    p.add_argument("--allow-cached", action="store_true", help="Accept a complete cached batch; never classify it as a new online case")
     p.add_argument("--no-local", action="store_true", help="Do not load config/local.yaml or config/secrets.yaml")
     p.add_argument("--max-results", type=int, default=None, help="Max candidates per seed")
     p.add_argument("--grade", default="C", choices=["A", "B", "C"], help="Minimum grade to output")
@@ -53,7 +54,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    args = build_arg_parser().parse_args(argv)
+    arg_parser = build_arg_parser()
+    args = arg_parser.parse_args(argv)
+    if not args.dry_run and args.mode is None:
+        arg_parser.error("Execution requires --mode live, demo or test; no implicit demo")
     load_local = False  # v2 never loads legacy local.yaml/secrets.yaml credentials
     config = config_loader.load_config(args.config, load_local=load_local)
     _apply_runtime_mode(config, args.mode)
@@ -76,8 +80,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     try:
         run_pipeline(args.input, args.output, config, min_grade=args.grade)
-        if config.get("_run_stats", {}).get("tradewind", {}).get("stop_reason"):
-            print("Partial output saved; inspect .stats.json and .evidence.json", file=sys.stderr)
+        audit = config.get("_run_stats", {}).get("tradewind", {}).get("execution_audit", {})
+        if args.mode == "live" and (not audit.get("coverage_complete") or not (audit.get("new_online_case") or args.allow_cached and audit.get("cached_or_live_complete"))):
+            print("Partial output saved; inspect .audit.json, .stats.json and .evidence.json", file=sys.stderr)
             return 2
         return 0
     except Exception as exc:

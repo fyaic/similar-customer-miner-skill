@@ -1,6 +1,6 @@
-# 工程说明 · Trade Wind 2.0.0rc3
+# 工程说明 · Trade Wind 2.0.0rc4
 
-本文件对应 `codex/tradewind-v2-rc3`。原架构在 main/Git 历史可查；旧 Apify/Hunter 配置和脚本不再指导新版在线运行。
+本文件对应 `codex/tradewind-v2-rc4`。原架构在 main/Git 历史可查；旧 Apify/Hunter 配置和脚本不再指导新版在线运行。
 
 在线链路为 `parser → profiler → tradewind.mine → scoring → exporter`。CLI 不加载 local/secrets YAML，并清空旧凭证；便携入口为 `scripts/run.py`。demo/test 保留离线旧实现。Trade Wind 客户端、同账户 SQLite 账本、鉴权域名限制、禁止重定向、脱敏和精确缓存复用沿用海外同行项目经验。
 
@@ -16,6 +16,10 @@
 
 版本由 `src/tradewind_core/__init__.py` 供运行与打包引用；发布时同步 pyproject、default.yaml、SKILL、双语 README 和审查记录。包生成逐文件 MANIFEST 与内部 DISTRIBUTION 元数据；在独立安装目录验证入口、配置来源、导出和清单。验收依据见 [发布审查](docs/RELEASE_REVIEW.md) 与 [验证摘要](docs/validation.json)。
 
-分发策略：`scripts/build_skill.py` 仅包含接收者所需的代码、配置、接口参考、输入样例、README 和 SKILL；排除整个 docs 目录、工程说明、测试及评测脚本。API目录中的 `live_verified`/`live_scope` 内部探测注记仅在打包时移除，接口契约保持不变。内置 key 只写入 `.credentials/tradewind.env`，MANIFEST/DISTRIBUTION 标记 `distribution_profile: recipient`。内部报告留在仓库和本地验收目录，独立管理。运行版号为 rc3；rc2 标签与分发包保留不覆盖，旧报告归档于 docs/releases/2.0.0rc2。
+分发策略：`scripts/build_skill.py` 仅包含接收者所需的代码、配置、接口参考、输入样例、README 和 SKILL；排除整个 docs 目录、工程说明、测试及评测脚本。API目录中的 `live_verified`/`live_scope` 内部探测注记仅在打包时移除，接口契约保持不变。内置 key 只写入 `.credentials/tradewind.env`，MANIFEST/DISTRIBUTION 标记 `distribution_profile: recipient`。内部报告留在仓库和本地验收目录，独立管理。运行版号为 rc4；rc2 标签与分发包保留不覆盖，旧报告归档于 docs/releases/2.0.0rc2。
 
 构建：`python scripts/build_skill.py --output /private/path/skill.zip --key-file /private/path/tradewind.env --recipient sps`。检查包内 Markdown 本地链接、排除清单、凭证唯一位置和独立目录 doctor；不要把验收目录附入交付包。
+
+## rc4 execution audit
+
+Explicit execution mode; per-query/company stage coverage; local ledger receipt checks; new live/cached/injected/legacy provenance separated. Missing domain, product hold and enrichment cap are incomplete. Apollo title filters and single-domain people calls; raw safe/role_account normalization preserves catch-all tri-state. Prior rc3 evidence is archived in docs/releases/2.0.0rc3; current evidence must not be inferred from historical replay.

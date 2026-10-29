@@ -52,7 +52,7 @@ def test_cli_runtime_modes_control_local_loading():
         ["--input", "in.csv", "--output", "out.xlsx", "--mode", "live", "--no-local"]
     )
 
-    assert demo_args.mode == "demo"
+    assert demo_args.mode is None
     assert live_args.mode == "live"
     assert no_local_args.no_local is True
 

@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0rc3",
+  "date": "2026-10-29",
+  "scope": "Recipient package candidate; final clean-commit archive check recorded separately beside private delivery",
+  "archive_files": 56,
+  "manifest_hashes": "passed",
+  "provided_key_only_in_credentials": "passed",
+  "internal_evaluation_excluded": "passed",
+  "local_markdown_links": "passed",
+  "independent_directory_doctor": "passed",
+  "ambient_key_ignored": "passed",
+  "legacy_keys_unused": "passed",
+  "portable_preview_with_review_file": "passed",
+  "installed_frozen_replay_candidates": [
+    2,
+    1,
+    1
+  ],
+  "installed_frozen_replay_queue": [
+    1,
+    2,
+    2
+  ],
+  "network_during_install_checks": "blocked",
+  "new_paid_calls": 0
+}

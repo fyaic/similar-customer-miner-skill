@@ -94,6 +94,8 @@ def main(argv=None):
     lines.append("## 发现有效性")
     tw = stats.get("tradewind")
     if tw:
+        audit = tw.get('execution_audit', {})
+        lines.append(f"- 执行审计: {audit.get('classification', 'missing')}；公司完成 {audit.get('companies_complete', 0)}/{audit.get('companies_planned', 0)}；新增真实回执 {audit.get('new_live_receipts', 0)}；缓存回执 {audit.get('cached_receipts', 0)}")
         d = tw.get('discovery', {})
         lines.append(f"- Trade Wind 候选: {tw.get('candidate_count', 0)}；种子排除: {d.get('excluded_seed', 0)}；去重: {d.get('duplicates', 0)}；国家/身份隔离: {d.get('country_mismatch', 0)}")
         lines.append(f"- 发现候选: {tw.get('discovered_candidates', '?')}；产品未佐证: {tw.get('product_unconfirmed_count', 0)}")

@@ -16,7 +16,9 @@ tradewind:
   require_product_match: true
   product_aliases: {}          # 可配置 faucet: [water taps]，仅用于本地匹配
   contact_search_enabled: true # false仅做公司筛选，不查人员/邮箱
-  people_source: hunter        # Trade Wind内部来源；也可apollo/rocketreach
+  people_source: apollo        # Trade Wind内部来源；也可hunter/rocketreach
+  people_per_page: 5
+  people_job_titles: [purchasing, procurement, sourcing, supply chain, operations, owner, president]
   enrich_people: true
   verify_email: false
   email_verification_mode: quick  # quick / power
@@ -30,6 +32,8 @@ tradewind:
 
 输出：在线 `线索名单`、`待复核`、`Results`、`Summary` 四页 Excel（demo保持三页），另支持 CSV/Markdown；统计 `.stats.json`、原始响应及隔离理由 `.evidence.json`、待复核队列 `.review.json`。CSV/Markdown 同样生成队列 JSON。证据含联系方式，按授权范围保管。A/B/C 衡量字段置信度，事实状态为 pending。`scripts/run_report.py leads.xlsx` 生成 Trade Wind 费用和筛选报告。空结果需解释查询/筛除原因，不生成假线索。
 
-退出码0=流程结束（可能零候选），1=错误，2=预算/API导致部分交付。最多补全N家是上限，不保证处理N家；实际看 enriched_companies 和 enrichment_deferred_count。预算累计包含同账本历史费用与未决预留，缓存精确请求7天；不要换目录绕过未决费用。默认状态位于工作目录 `.similar-state/<账户指纹>`。本版不自动加载旧 local/secrets YAML，内部包默认使用内置 key；明确更换账户才用 `--env-file`。
+在线退出码0=范围内覆盖完整且有新增真实业务回执（可零命中），1=错误，2=未覆盖或真实执行未证明。--allow-cached 显式接受全部覆盖且有真实历史来源的缓存批次，但不算新增案例。最多补全N家是上限，不保证处理N家；实际看 enriched_companies 和 enrichment_deferred_count。预算累计包含同账本历史费用与未决预留，缓存精确请求7天；不要换目录绕过未决费用。默认状态位于工作目录 `.similar-state/<账户指纹>`。本版不自动加载旧 local/secrets YAML，内部包默认使用内置 key；明确更换账户才用 `--env-file`。
 
 产品证据复核与同义词的格式、范围和限制见 [产品复核流程](product-review.md)。`business_role` 仅为描述线索；`import_evidence_status` 的 matched_sample 仅代表买家名称/域名匹配的海关样本；`buyer_qualification` 仍为 unverified。
+
+rc4 必须显式选择运行模式。逐查询/逐公司 `.audit.json` 区分真实新增与缓存回执；任何计划范围内的未覆盖（含产品待复核或补全上限）在线退出2。明确接受缓存可加 --allow-cached；内部回放不能成为线上案例。详见 [完成门槛](../SKILL.md)。

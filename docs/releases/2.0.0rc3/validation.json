@@ -1,0 +1,226 @@
+{
+  "version": "2.0.0rc3",
+  "date": "2026-10-29",
+  "baseline_tag": "v2.0.0rc2",
+  "baseline_commit": "4d38dfe404e481e9d83cf34d54693d6eaec9cf11",
+  "tests": {
+    "passed": 129,
+    "new_qualification_cases": 30,
+    "existing_business_acceptance_cases": 29,
+    "warnings": 1
+  },
+  "skill_structure": "passed",
+  "replay": {
+    "baseline": {
+      "mode": "frozen_response_replay",
+      "network_calls": 0,
+      "actual_new_credits": "0",
+      "company_only": true,
+      "contact_search_enabled": true,
+      "external_product_reviews": false,
+      "response_library_sha256": "f36b0608e6fe04ba73a1c002fb2db39e71776e93f81e969c79d5f71139c18791",
+      "cases": [
+        {
+          "case": "faucet-us",
+          "candidates": 2,
+          "companies": [
+            {
+              "name": "WaterSaver Faucet Co",
+              "website": "https://wsflab.com",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "matched"
+            },
+            {
+              "name": "Mountain Plumbing Products",
+              "website": "https://mountainplumbing.com",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "matched"
+            }
+          ],
+          "stop_reason": null,
+          "product_unconfirmed": 1,
+          "review_queue_count": 0,
+          "reviewed_product_matches": 0
+        },
+        {
+          "case": "packaging-ca",
+          "candidates": 1,
+          "companies": [
+            {
+              "name": "Cascades",
+              "website": "https://cascades.com",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "matched"
+            }
+          ],
+          "stop_reason": null,
+          "product_unconfirmed": 2,
+          "review_queue_count": 0,
+          "reviewed_product_matches": 0
+        },
+        {
+          "case": "tools-gb",
+          "candidates": 0,
+          "companies": [],
+          "stop_reason": null,
+          "product_unconfirmed": 3,
+          "review_queue_count": 0,
+          "reviewed_product_matches": 0
+        }
+      ],
+      "missing_responses": []
+    },
+    "default": {
+      "mode": "frozen_response_replay",
+      "network_calls": 0,
+      "actual_new_credits": "0",
+      "company_only": true,
+      "contact_search_enabled": true,
+      "external_product_reviews": false,
+      "response_library_sha256": "f36b0608e6fe04ba73a1c002fb2db39e71776e93f81e969c79d5f71139c18791",
+      "cases": [
+        {
+          "case": "faucet-us",
+          "candidates": 2,
+          "companies": [
+            {
+              "name": "WaterSaver Faucet Co",
+              "website": "https://wsflab.com",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "matched"
+            },
+            {
+              "name": "Mountain Plumbing Products",
+              "website": "https://mountainplumbing.com",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "matched"
+            }
+          ],
+          "stop_reason": null,
+          "product_unconfirmed": 1,
+          "review_queue_count": 1,
+          "reviewed_product_matches": 0
+        },
+        {
+          "case": "packaging-ca",
+          "candidates": 1,
+          "companies": [
+            {
+              "name": "Cascades",
+              "website": "https://cascades.com",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "matched"
+            }
+          ],
+          "stop_reason": null,
+          "product_unconfirmed": 2,
+          "review_queue_count": 2,
+          "reviewed_product_matches": 0
+        },
+        {
+          "case": "tools-gb",
+          "candidates": 0,
+          "companies": [],
+          "stop_reason": null,
+          "product_unconfirmed": 3,
+          "review_queue_count": 3,
+          "reviewed_product_matches": 0
+        }
+      ],
+      "missing_responses": []
+    },
+    "with_official_review": {
+      "mode": "frozen_response_replay",
+      "network_calls": 0,
+      "actual_new_credits": "0",
+      "company_only": true,
+      "contact_search_enabled": false,
+      "external_product_reviews": true,
+      "response_library_sha256": "f36b0608e6fe04ba73a1c002fb2db39e71776e93f81e969c79d5f71139c18791",
+      "cases": [
+        {
+          "case": "faucet-us",
+          "candidates": 2,
+          "companies": [
+            {
+              "name": "WaterSaver Faucet Co",
+              "website": "https://wsflab.com",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "matched"
+            },
+            {
+              "name": "Mountain Plumbing Products",
+              "website": "https://mountainplumbing.com",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "matched"
+            }
+          ],
+          "stop_reason": null,
+          "product_unconfirmed": 1,
+          "review_queue_count": 1,
+          "reviewed_product_matches": 0
+        },
+        {
+          "case": "packaging-ca",
+          "candidates": 1,
+          "companies": [
+            {
+              "name": "Cascades",
+              "website": "https://cascades.com",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "matched"
+            }
+          ],
+          "stop_reason": null,
+          "product_unconfirmed": 2,
+          "review_queue_count": 2,
+          "reviewed_product_matches": 0
+        },
+        {
+          "case": "tools-gb",
+          "candidates": 1,
+          "companies": [
+            {
+              "name": "Machine Mart",
+              "website": "https://machinemart.co.uk",
+              "title": null,
+              "named_contact": false,
+              "mailbox_verified": false,
+              "product_status": "reviewed_match"
+            }
+          ],
+          "stop_reason": null,
+          "product_unconfirmed": 2,
+          "review_queue_count": 2,
+          "reviewed_product_matches": 1
+        }
+      ],
+      "missing_responses": []
+    }
+  },
+  "new_paid_calls": 0,
+  "new_credits": "0",
+  "accepted_official_reviews": 1,
+  "website_review_is_additional_input": true,
+  "contact_coverage_improvement_tested": false,
+  "sales_conversion_improvement_tested": false,
+  "superseded_experiment": "Two-review experiment discarded; Makita fresh full-page retrieval not established; final acceptance only uses Machine Mart homepage evidence"
+}

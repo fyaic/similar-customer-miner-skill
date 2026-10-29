@@ -1,226 +1,206 @@
 {
-  "version": "2.0.0rc3",
+  "version": "2.0.0rc4",
   "date": "2026-10-29",
-  "baseline_tag": "v2.0.0rc2",
-  "baseline_commit": "4d38dfe404e481e9d83cf34d54693d6eaec9cf11",
+  "baseline_tag": "v2.0.0rc3",
+  "baseline_commit": "a6e84397b42a33f96c5b54913295d08772854ff3",
   "tests": {
-    "passed": 129,
-    "new_qualification_cases": 30,
-    "existing_business_acceptance_cases": 29,
-    "warnings": 1
+    "passed": 150,
+    "warnings": 1,
+    "new_execution_cases": 21
   },
   "skill_structure": "passed",
-  "replay": {
-    "baseline": {
-      "mode": "frozen_response_replay",
-      "network_calls": 0,
-      "actual_new_credits": "0",
-      "company_only": true,
-      "contact_search_enabled": true,
-      "external_product_reviews": false,
-      "response_library_sha256": "f36b0608e6fe04ba73a1c002fb2db39e71776e93f81e969c79d5f71139c18791",
-      "cases": [
-        {
-          "case": "faucet-us",
-          "candidates": 2,
-          "companies": [
-            {
-              "name": "WaterSaver Faucet Co",
-              "website": "https://wsflab.com",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "matched"
-            },
-            {
-              "name": "Mountain Plumbing Products",
-              "website": "https://mountainplumbing.com",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "matched"
-            }
-          ],
-          "stop_reason": null,
-          "product_unconfirmed": 1,
-          "review_queue_count": 0,
-          "reviewed_product_matches": 0
-        },
-        {
-          "case": "packaging-ca",
-          "candidates": 1,
-          "companies": [
-            {
-              "name": "Cascades",
-              "website": "https://cascades.com",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "matched"
-            }
-          ],
-          "stop_reason": null,
-          "product_unconfirmed": 2,
-          "review_queue_count": 0,
-          "reviewed_product_matches": 0
-        },
-        {
-          "case": "tools-gb",
-          "candidates": 0,
-          "companies": [],
-          "stop_reason": null,
-          "product_unconfirmed": 3,
-          "review_queue_count": 0,
-          "reviewed_product_matches": 0
-        }
-      ],
-      "missing_responses": []
+  "source_comparison": {
+    "sample_companies": 3,
+    "hunter": "Historical exact-query real receipts; not refreshed",
+    "apollo": "New live receipts",
+    "summary": [
+      {
+        "domain": "wsflab.com",
+        "source": "hunter",
+        "reused": true,
+        "count": 5,
+        "named": 5,
+        "employer_matched": 5,
+        "role_matched": 1,
+        "with_email": 0,
+        "credits": null
+      },
+      {
+        "domain": "wsflab.com",
+        "source": "apollo",
+        "reused": false,
+        "count": 5,
+        "named": 5,
+        "employer_matched": 5,
+        "role_matched": 1,
+        "with_email": 0,
+        "credits": "0.52"
+      },
+      {
+        "domain": "mountainplumbing.com",
+        "source": "hunter",
+        "reused": true,
+        "count": 5,
+        "named": 3,
+        "employer_matched": 5,
+        "role_matched": 1,
+        "with_email": 0,
+        "credits": null
+      },
+      {
+        "domain": "mountainplumbing.com",
+        "source": "apollo",
+        "reused": false,
+        "count": 5,
+        "named": 5,
+        "employer_matched": 5,
+        "role_matched": 2,
+        "with_email": 0,
+        "credits": "0.52"
+      },
+      {
+        "domain": "cascades.com",
+        "source": "hunter",
+        "reused": true,
+        "count": 5,
+        "named": 5,
+        "employer_matched": 5,
+        "role_matched": 0,
+        "with_email": 0,
+        "credits": null
+      },
+      {
+        "domain": "cascades.com",
+        "source": "apollo",
+        "reused": false,
+        "count": 5,
+        "named": 5,
+        "employer_matched": 5,
+        "role_matched": 1,
+        "with_email": 0,
+        "credits": "0.52"
+      }
+    ],
+    "new_requests": 3,
+    "credits": "1.56"
+  },
+  "targeted_roles": {
+    "summary": [
+      {
+        "domain": "wsflab.com",
+        "count": 5,
+        "named": 5,
+        "role_matched": 5,
+        "titles": [
+          "Purchasing Manager",
+          "Purchasing Clerk / Buyer",
+          "President",
+          "Vice President",
+          "Director of Operations"
+        ]
+      },
+      {
+        "domain": "mountainplumbing.com",
+        "count": 5,
+        "named": 5,
+        "role_matched": 4,
+        "titles": [
+          "Purchasing Agent",
+          "Owner",
+          "President",
+          "Director of Operations",
+          "Vice President, Sales & Marketing"
+        ]
+      },
+      {
+        "domain": "cascades.com",
+        "count": 5,
+        "named": 5,
+        "role_matched": 5,
+        "titles": [
+          "Manager Supply Chain",
+          "Supply Chain Analyst",
+          "Supply Chain Manager",
+          "Supply Chain Analyst",
+          "Business Process Expert Supply Chain"
+        ]
+      }
+    ],
+    "new_requests": 3,
+    "credits": "1.56",
+    "role_match_total": 14,
+    "comparison_untargeted_apollo_role_match_total": 4,
+    "means_verified_decision_makers": false
+  },
+  "installed_live": {
+    "network": "real",
+    "refresh": "Explicit cache_days=0 release end-to-end validation; same account ledger and cumulative cap",
+    "new_requests": 9,
+    "new_credits": "3.00",
+    "companies_planned": 2,
+    "companies_complete": 2,
+    "new_online_case": true,
+    "ledger_audit": "passed",
+    "named_contacts": 1,
+    "role_matched_contacts": 1,
+    "verified_mailboxes": 1,
+    "verified_named_mailboxes": 0,
+    "verified_company_channels": 1,
+    "mailbox_raw_statuses": [
+      "catch_all",
+      "role_account"
+    ],
+    "unresolved_operations": 0,
+    "source_package_sha256": "c8b9118e2957c5780810b08b040f2dc05504ace660a55e85322a5cdbb964bbd7"
+  },
+  "final_candidate": {
+    "api_runtime_identical_to_live_candidate": true,
+    "post_live_change": "Export raw mailbox flags and execution summary, validated with same real receipts and network blocked",
+    "cached_real_receipt_check": {
+      "audit": {
+        "passed": true,
+        "classification": "cached_complete",
+        "companies_planned": 2,
+        "companies_complete": 2,
+        "new_live_receipts": 0,
+        "cached_receipts": 9,
+        "errors": []
+      },
+      "export": "raw status, catch-all, company-channel separation passed",
+      "network": "blocked",
+      "new_credits": "0",
+      "installed_skill": "/Users/veil/projects/similar-customer-miner-skill/outputs/rc4-review/installed-v2/similar-customer-miner"
     },
-    "default": {
-      "mode": "frozen_response_replay",
+    "frozen_qualification_replay": {
       "network_calls": 0,
-      "actual_new_credits": "0",
-      "company_only": true,
-      "contact_search_enabled": true,
-      "external_product_reviews": false,
-      "response_library_sha256": "f36b0608e6fe04ba73a1c002fb2db39e71776e93f81e969c79d5f71139c18791",
-      "cases": [
-        {
-          "case": "faucet-us",
-          "candidates": 2,
-          "companies": [
-            {
-              "name": "WaterSaver Faucet Co",
-              "website": "https://wsflab.com",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "matched"
-            },
-            {
-              "name": "Mountain Plumbing Products",
-              "website": "https://mountainplumbing.com",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "matched"
-            }
-          ],
-          "stop_reason": null,
-          "product_unconfirmed": 1,
-          "review_queue_count": 1,
-          "reviewed_product_matches": 0
-        },
-        {
-          "case": "packaging-ca",
-          "candidates": 1,
-          "companies": [
-            {
-              "name": "Cascades",
-              "website": "https://cascades.com",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "matched"
-            }
-          ],
-          "stop_reason": null,
-          "product_unconfirmed": 2,
-          "review_queue_count": 2,
-          "reviewed_product_matches": 0
-        },
-        {
-          "case": "tools-gb",
-          "candidates": 0,
-          "companies": [],
-          "stop_reason": null,
-          "product_unconfirmed": 3,
-          "review_queue_count": 3,
-          "reviewed_product_matches": 0
-        }
+      "new_credits": "0",
+      "leads": [
+        2,
+        1,
+        1
       ],
-      "missing_responses": []
-    },
-    "with_official_review": {
-      "mode": "frozen_response_replay",
-      "network_calls": 0,
-      "actual_new_credits": "0",
-      "company_only": true,
-      "contact_search_enabled": false,
-      "external_product_reviews": true,
-      "response_library_sha256": "f36b0608e6fe04ba73a1c002fb2db39e71776e93f81e969c79d5f71139c18791",
-      "cases": [
-        {
-          "case": "faucet-us",
-          "candidates": 2,
-          "companies": [
-            {
-              "name": "WaterSaver Faucet Co",
-              "website": "https://wsflab.com",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "matched"
-            },
-            {
-              "name": "Mountain Plumbing Products",
-              "website": "https://mountainplumbing.com",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "matched"
-            }
-          ],
-          "stop_reason": null,
-          "product_unconfirmed": 1,
-          "review_queue_count": 1,
-          "reviewed_product_matches": 0
-        },
-        {
-          "case": "packaging-ca",
-          "candidates": 1,
-          "companies": [
-            {
-              "name": "Cascades",
-              "website": "https://cascades.com",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "matched"
-            }
-          ],
-          "stop_reason": null,
-          "product_unconfirmed": 2,
-          "review_queue_count": 2,
-          "reviewed_product_matches": 0
-        },
-        {
-          "case": "tools-gb",
-          "candidates": 1,
-          "companies": [
-            {
-              "name": "Machine Mart",
-              "website": "https://machinemart.co.uk",
-              "title": null,
-              "named_contact": false,
-              "mailbox_verified": false,
-              "product_status": "reviewed_match"
-            }
-          ],
-          "stop_reason": null,
-          "product_unconfirmed": 2,
-          "review_queue_count": 2,
-          "reviewed_product_matches": 1
-        }
+      "review_queue": [
+        1,
+        2,
+        2
       ],
-      "missing_responses": []
+      "historical_source": "Hunter; titles empty; explicit baseline settings"
     }
   },
-  "new_paid_calls": 0,
-  "new_credits": "0",
-  "accepted_official_reviews": 1,
-  "website_review_is_additional_input": true,
-  "contact_coverage_improvement_tested": false,
+  "total_new_requests": 15,
+  "new_credits": "6.12",
+  "authorized_local_new_budget": "8",
+  "ledger_before": "8.34",
+  "ledger_after": "14.46",
+  "remaining_local_allowance": "1.88",
   "sales_conversion_improvement_tested": false,
-  "superseded_experiment": "Two-review experiment discarded; Makita fresh full-page retrieval not established; final acceptance only uses Machine Mart homepage evidence"
+  "independently_verified_decision_makers": 0,
+  "limitations": [
+    "Three selected companies, not randomized representative A/B testing",
+    "Hunter baseline is historical, source and time effects cannot be separated",
+    "Title match is not procurement authority",
+    "One verified mailbox is a public company channel; named mailbox is catch-all",
+    "No fresh customs test or buying-intent confirmation",
+    "Local execution provenance is not provider-signed attestation"
+  ]
 }

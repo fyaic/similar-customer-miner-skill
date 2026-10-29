@@ -34,7 +34,7 @@ def build(output, key_file=None, recipient='internal'):
         for path in sorted((ROOT/folder).rglob('*')):
             if path.is_file() and path.suffix in {'.py','.yaml','.json','.md'} and '__pycache__' not in path.parts and path.name not in {'local.yaml','secrets.yaml'}:
                 files[str(path.relative_to(ROOT))] = path.read_bytes()
-    for name in ['SKILL.md','README.md','README.en.md','requirements.txt','LICENSE','scripts/run.py','scripts/verify_package.py','scripts/tradewind_ops.py','scripts/check_output.py','scripts/run_report.py','examples/en_one_anchor.csv','examples/sample_customers.xlsx']:
+    for name in ['SKILL.md','README.md','README.en.md','requirements.txt','LICENSE','scripts/run.py','scripts/audit_run.py','scripts/verify_package.py','scripts/tradewind_ops.py','scripts/check_output.py','scripts/run_report.py','examples/en_one_anchor.csv','examples/sample_customers.xlsx']:
         files[name] = (ROOT/name).read_bytes()
     # API contracts are needed at runtime; internal probe annotations are not.
     catalog = json.loads(files['references/api-catalog.json'])

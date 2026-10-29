@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 from src.models import SimilarCompany
 from src import scoring
 from src import qualification
+from src.execution_audit import build_audit
 from src.utils import normalize_company_name
 from src.tradewind_core.api import Client, estimate, prepare
 from src.tradewind_core.security import settings, private_json, redact
@@ -200,6 +201,7 @@ def apply_person(company, person, source):
 class Session:
     def __init__(self, config, send=None):
         self.config = config
+        self.started_at = datetime.now(timezone.utc).isoformat()
         cfg = config.get('tradewind', {})
         self.settings = settings(cfg.get('env_file'))
         if not self.settings['key']:
@@ -209,6 +211,7 @@ class Session:
         self.store.set_budget(cfg.get('max_credits', '2'))
         self.client = Client(self.settings, self.store, **({'send': send} if send else {}))
         self.events = []
+        self.context = {}
         self.stop_reason = None
         self.reused = 0
         self.new_credits = Decimal(0)
@@ -234,11 +237,14 @@ class Session:
             result = self.client.call(name, body, op_id, timeout=45)
         except ValueError as exc:
             self.stop_reason = str(exc)
-            self.events.append({'operation':name,'state':'deferred','reason':str(exc)})
+            self.events.append({'operation':name,'body':spec['body'],'context':dict(self.context),'state':'deferred','reason':str(exc)})
             return None
         saved = self.store.get(result['operation_id'])
         result['observed_at'] = saved['created'] if saved else None
-        self.events.append({'operation':name, **result})
+        result['billing_known'] = bool(saved and saved['billing_known'])
+        result['transport'] = ('live' if 'transport=live' in saved['notes'] else 'injected' if 'transport=injected' in saved['notes'] else 'legacy') if saved else 'unknown'
+        result['request_id'] = saved['request_id'] if saved else None
+        self.events.append({'operation':name, 'body':spec['body'], 'context':dict(self.context), **result})
         if result.get('reused'):
             self.reused += 1
         elif result.get('credits') is not None:
@@ -249,7 +255,7 @@ class Session:
         return result
 
     def report(self):
-        return {'provider':'tradewind','new_credits_known':str(self.new_credits),
+        return {'provider':'tradewind','run_started_at':self.started_at,'new_credits_known':str(self.new_credits),
                 'reused_requests':self.reused,'budget':self.store.budget(),'stop_reason':self.stop_reason,
                 'operations':self.events,'warning':'Local planning budget, not provider hard cap; results are unreviewed candidates'}
 
@@ -305,8 +311,14 @@ def apply_verification(company, verified):
     if checked_at:
         age = (datetime.now(timezone.utc)-datetime.fromisoformat(checked_at)).total_seconds()
         fresh = 0 <= age <= 7*86400
-    company.email_verification_status = str(data.get('status') or 'unknown') if subject_matches else 'subject_mismatch'
-    company.email_verified = bool(subject_matches and fresh and data.get('status') == 'valid'
+    raw = str(data.get('status') or 'unknown').lower()
+    company.email_verification_raw_status = raw
+    company.email_is_catch_all = data.get('is_catch_all') if type(data.get('is_catch_all')) is bool else None
+    company.email_is_safe_to_send = data.get('is_safe_to_send') if type(data.get('is_safe_to_send')) is bool else None
+    normalized = 'valid' if raw in {'safe', 'role_account'} and data.get('is_deliverable') is True and data.get('is_safe_to_send') is True else raw
+    company.email_verification_status = normalized if subject_matches else 'subject_mismatch'
+    company.email_verified = bool(subject_matches and fresh and normalized == 'valid'
+        and data.get('is_safe_to_send') is not False
         and data.get('is_deliverable') is True and data.get('is_catch_all') is False)
     company.email_verification_citation = citation(verified)
     company.email_verified_at = checked_at
@@ -338,7 +350,11 @@ def mine(profiles, config, output_path, send=None):
     names, domains = set(), set()
     stats = {'excluded_seed':0,'duplicates':0,'country_mismatch':0,'identity_missing':0}
     try:
-        for profile, body in bodies:
+        discovery_plan = []
+        for index, (profile, body) in enumerate(bodies):
+            discovery_plan.append({'seed': profile.customer_id, 'query': index, 'body': prepare('company.search', body)['body']})
+        for index, (profile, body) in enumerate(bodies):
+            session.context = {'seed': profile.customer_id, 'query': index}
             result = session.call('company.search', body)
             if not result:
                 break
@@ -376,10 +392,17 @@ def mine(profiles, config, output_path, send=None):
         companies = selected
         quarantined = []
         enriched_ids = set()
+        coverage = [{'seed': c.source_seed, 'company': c.company_name, 'domain': domain(c.website), 'disposition': 'pending'} for c in companies]
+        coverage_by_id = {id(c): item for c, item in zip(companies, coverage)}
+        for c in companies:
+            if c.product_match_status == 'reviewed_unrelated': coverage_by_id[id(c)]['disposition'] = 'excluded_product'
         eligible = [c for c in companies if c.product_match_status != 'reviewed_unrelated']
         for company in eligible[:int(opts.get('max_enrich', 5))]:
+            item = coverage_by_id[id(company)]
+            session.context = {'seed': company.source_seed, 'domain': domain(company.website)}
             d = domain(company.website)
             if not d:
+                item['disposition'] = 'missing_domain'
                 note(company,'No reliable domain; contact enrichment skipped')
                 continue
             detail = session.call('company.enrich',{'identity':{'domains':[d]},'waterfall':{'mode':'first_match','source_order':['hunter']}})
@@ -388,19 +411,23 @@ def mine(profiles, config, output_path, send=None):
                 for row in unpack(detail['response'],'company'):
                     apply_company(company,row,citation(detail))
             if (company.country and iso_country(company.country) not in target_countries(config)) or 'Country conflict' in (company.notes or '') or 'Company domain conflict' in (company.notes or ''):
+                item['disposition'] = 'excluded_identity'
                 stats['country_mismatch'] += 1
                 quarantined.append({'company': company.company_name, 'reason': company.notes, 'source': company.all_citations})
                 continue
             qualification.apply_assessment(company, profile_by_id[company.source_seed], aliases, reviews)
             if company.product_match_status == 'reviewed_unrelated' or (opts.get('require_product_match', True) and company.product_match_status == 'needs_review'):
+                item['disposition'] = 'excluded_product' if company.product_match_status == 'reviewed_unrelated' else 'product_review_required'
                 note(company, 'Product relevance not corroborated; contact enrichment skipped')
                 continue
+            item['disposition'] = 'qualified'
             if opts.get('customs_enabled') and not session.stop_reason:
                 verify_customs(company, session, opts)
             if not opts.get('contact_search_enabled', True):
                 continue
-            result = session.call('people.search',{'company':{'domains':[d]},'page':1,'per_page':5,
-                'waterfall':{'mode':'first_match','source_order':[opts.get('people_source','hunter')]}})
+            result = session.call('people.search',{'company':{'domains':[d]},'page':1,'per_page':opts.get('people_per_page', 5),
+                **({'job': {'job_titles': opts['people_job_titles']}} if opts.get('people_job_titles') else {}),
+                'waterfall':{'mode':'first_match','source_order':[opts.get('people_source','apollo')]}})
             if result:
                 person_enrich_used = 0
                 for person in sorted(unpack(result['response'],'people'), key=role_rank, reverse=True):
@@ -415,7 +442,7 @@ def mine(profiles, config, output_path, send=None):
                     if opts.get('enrich_people',True) and identity and person_enrich_used < 1:
                         person_enrich_used += 1
                         enriched = session.call('people.enrich',{'identity':identity,
-                            'waterfall':{'mode':'first_match','source_order':[opts.get('people_source','hunter')],'reveal_phone':False}})
+                            'waterfall':{'mode':'first_match','source_order':[opts.get('people_source','apollo')],'reveal_phone':False}})
                         if enriched:
                             for row in unpack(enriched['response'],'person'):
                                 apply_person(company,row,citation(enriched))
@@ -453,7 +480,12 @@ def mine(profiles, config, output_path, send=None):
         rejected = {item['company'] for item in quarantined}
         rejected.update(item['company_name'] for item in review_queue)
         companies = [c for c in companies if c.company_name not in rejected]
+        for c in companies:
+            coverage_by_id[id(c)]['email'] = c.email
         report = session.report()
+        audit = build_audit(discovery_plan, coverage, session.events, opts, session.stop_reason)
+        report['execution_audit'] = audit
+        private_json(Path(output_path).with_suffix('.audit.json'), audit)
         report['quarantined'] = quarantined
         report['review_queue'] = review_queue
         report['review_queue_count'] = len(review_queue)
@@ -488,6 +520,11 @@ def mine(profiles, config, output_path, send=None):
 
 def validate_options(opts):
     qualification.validate_aliases(opts.get('product_aliases', {}))
+    if type(opts.get('people_per_page', 5)) is not int or not 1 <= opts.get('people_per_page', 5) <= 100:
+        raise ValueError('people_per_page must be 1..100')
+    titles = opts.get('people_job_titles', [])
+    if not isinstance(titles, list) or any(not isinstance(t, str) or not t.strip() for t in titles) or len(titles) > 20:
+        raise ValueError('people_job_titles must contain at most 20 nonempty strings')
     if not isinstance(opts.get('contact_search_enabled', True), bool):
         raise ValueError('contact_search_enabled must be a boolean')
     if opts.get('email_verification_mode', 'quick') not in {'quick', 'power'}:
@@ -496,7 +533,7 @@ def validate_options(opts):
         raise ValueError('discovery_strategy must be keywords, similar, or hybrid')
     if not 1 <= int(opts.get('max_discovery_queries', 2)) <= 4:
         raise ValueError('max_discovery_queries must be 1..4')
-    if opts.get('people_source', 'hunter') not in {'hunter','apollo','rocketreach'}:
+    if opts.get('people_source', 'apollo') not in {'hunter','apollo','rocketreach'}:
         raise ValueError('people_source must be hunter, apollo, or rocketreach')
     if not 0 <= int(opts.get('max_enrich',5)) <= 100:
         raise ValueError('max_enrich must be 0..100')
