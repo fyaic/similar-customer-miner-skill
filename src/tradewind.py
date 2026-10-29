@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 from src.models import SimilarCompany
 from src import scoring
+from src import qualification
 from src.utils import normalize_company_name
 from src.tradewind_core.api import Client, estimate, prepare
 from src.tradewind_core.security import settings, private_json, redact
@@ -254,19 +255,7 @@ class Session:
 
 
 def product_match(company, profile):
-    """Conservative textual corroboration; no import/buyer inference from a hit."""
-    if not profile.product_tags:
-        return 'anchor_only'
-    text = ' '.join([company.main_products or '', *company.industry_tags]).lower()
-    if not text.strip():
-        return 'unknown'
-    normalize = lambda word: word[:-1] if len(word) > 3 and word.endswith('s') else word
-    words = {normalize(w) for w in re.findall(r'[\w]+', text)}
-    for tag in profile.product_tags:
-        tokens = {normalize(w) for w in re.findall(r'[\w]+', tag.lower())}
-        if tokens and tokens <= words:
-            return 'matched'
-    return 'unconfirmed'
+    return qualification.assess_product(company, profile)[0]
 
 
 def target_countries(cfg):
@@ -336,6 +325,8 @@ def mine(profiles, config, output_path, send=None):
         raise ValueError('max_results_per_customer must be 1..100')
     # Validate before creating any paid operations.
     validate_options(opts)
+    aliases = opts.get('product_aliases', {})
+    reviews = qualification.load_reviews(opts.get('product_evidence_file'), aliases)
     bodies = [(p, body) for p in profiles for body in discovery_requests(p, config, limit)]
     # Scores must use the actual requested market, not the profiler's legacy US default.
     from dataclasses import replace
@@ -373,17 +364,20 @@ def mine(profiles, config, output_path, send=None):
                 names.add(nk)
                 if dk: domains.add(dk)
                 companies.append(company)
+        profile_by_id = {p.customer_id: p for p in profiles}
+        for company in companies:
+            qualification.apply_assessment(company, profile_by_id[company.source_seed], aliases, reviews)
         scoring.score_companies(companies, scoring_profiles, config)
         # Bound each seed after merging discovery routes, then spend enrichment on fit.
         selected = []
-        for company in sorted(companies, key=lambda c: -c.fit_score):
+        for company in sorted(companies, key=lambda c: (c.product_match_status not in {'matched', 'matched_alias', 'reviewed_match'}, -c.fit_score)):
             if sum(c.source_seed == company.source_seed for c in selected) < limit:
                 selected.append(company)
         companies = selected
         quarantined = []
-        profile_by_id = {p.customer_id: p for p in profiles}
         enriched_ids = set()
-        for company in companies[:int(opts.get('max_enrich', 5))]:
+        eligible = [c for c in companies if c.product_match_status != 'reviewed_unrelated']
+        for company in eligible[:int(opts.get('max_enrich', 5))]:
             d = domain(company.website)
             if not d:
                 note(company,'No reliable domain; contact enrichment skipped')
@@ -397,12 +391,14 @@ def mine(profiles, config, output_path, send=None):
                 stats['country_mismatch'] += 1
                 quarantined.append({'company': company.company_name, 'reason': company.notes, 'source': company.all_citations})
                 continue
-            company.product_match_status = product_match(company, profile_by_id[company.source_seed])
-            if opts.get('require_product_match', True) and company.product_match_status in {'unknown', 'unconfirmed'}:
+            qualification.apply_assessment(company, profile_by_id[company.source_seed], aliases, reviews)
+            if company.product_match_status == 'reviewed_unrelated' or (opts.get('require_product_match', True) and company.product_match_status == 'needs_review'):
                 note(company, 'Product relevance not corroborated; contact enrichment skipped')
                 continue
             if opts.get('customs_enabled') and not session.stop_reason:
                 verify_customs(company, session, opts)
+            if not opts.get('contact_search_enabled', True):
+                continue
             result = session.call('people.search',{'company':{'domains':[d]},'page':1,'per_page':5,
                 'waterfall':{'mode':'first_match','source_order':[opts.get('people_source','hunter')]}})
             if result:
@@ -433,23 +429,42 @@ def mine(profiles, config, output_path, send=None):
                 break
         discovered_count = len(companies)
         product_unconfirmed = 0
+        review_queue = []
+        excluded_names = {q['company'] for q in quarantined}
         for company in companies:
-            company.product_match_status = product_match(company, profile_by_id[company.source_seed])
-            if opts.get('require_product_match', True) and company.product_match_status in {'unknown', 'unconfirmed'}:
+            profile = profile_by_id[company.source_seed]
+            qualification.apply_assessment(company, profile, aliases, reviews)
+            qualification.apply_business_role(company)
+            if company.company_name in excluded_names:
+                continue
+            if company.product_match_status == 'reviewed_unrelated':
+                quarantined.append({'company': company.company_name, 'reason': company.product_match_reason,
+                                    'source': company.product_evidence_citation})
+            elif company.product_match_status == 'needs_review':
                 product_unconfirmed += 1
-                quarantined.append({'company': company.company_name, 'reason': 'Product relevance '+company.product_match_status,
-                                    'source': company.all_citations})
+                if opts.get('require_product_match', True):
+                    review_queue.append({'source_seed': company.source_seed, 'company_name': company.company_name,
+                        'website': company.website, 'country': company.country, 'requested_products': profile.product_tags,
+                        'provider_description': company.main_products, 'product_match_status': company.product_match_status,
+                        'reason': company.product_match_reason, 'business_role': company.business_role,
+                        'buyer_qualification': company.buyer_qualification, 'source': company.all_citations,
+                        'next_action': 'Inspect official product/catalog pages; supply a dated product review before promotion'})
         deferred_count = sum(id(c) not in enriched_ids for c in companies)
         rejected = {item['company'] for item in quarantined}
+        rejected.update(item['company_name'] for item in review_queue)
         companies = [c for c in companies if c.company_name not in rejected]
         report = session.report()
         report['quarantined'] = quarantined
+        report['review_queue'] = review_queue
+        report['review_queue_count'] = len(review_queue)
+        report['reviewed_product_matches'] = sum(c.product_match_status == 'reviewed_match' for c in companies)
+        report['excluded_count'] = len(quarantined)
         report['enriched_companies'] = len(enriched_ids)
         report['role_matched_contacts'] = sum(c.contact_role_fit is True for c in companies)
         report['discovery_requests_planned'] = len(bodies)
         report['discovered_candidates'] = discovered_count
         report['product_unconfirmed_count'] = product_unconfirmed
-        report['qualification'] = 'Product text corroboration only; import activity and procurement authority remain unverified'
+        report['qualification'] = 'Product evidence only; business-role hints and customs samples do not establish procurement authority or buying intent'
         report['discovery'] = stats
         report['candidate_count'] = len(companies)
         report['enrichment_deferred_count'] = deferred_count
@@ -457,8 +472,12 @@ def mine(profiles, config, output_path, send=None):
         report['verified_mailboxes'] = sum(c.email_verified for c in companies)
         evidence_path = Path(output_path).with_suffix('.evidence.json')
         private_json(evidence_path, report)
-        config.setdefault('_run_stats',{})['tradewind'] = {k:v for k,v in report.items() if k not in {'operations', 'quarantined'}}
+        review_path = Path(output_path).with_suffix('.review.json')
+        private_json(review_path, {'schema_version': 1, 'candidates': review_queue})
+        config['_review_queue'] = review_queue
+        config.setdefault('_run_stats',{})['tradewind'] = {k:v for k,v in report.items() if k not in {'operations', 'quarantined', 'review_queue'}}
         config['_run_stats']['evidence_file'] = str(evidence_path)
+        config['_run_stats']['review_file'] = str(review_path)
         for company in companies:
             if not company.hs_codes:
                 note(company,'Import/HS/procurement evidence unavailable; similarity is not proof of China imports')
@@ -468,6 +487,9 @@ def mine(profiles, config, output_path, send=None):
 
 
 def validate_options(opts):
+    qualification.validate_aliases(opts.get('product_aliases', {}))
+    if not isinstance(opts.get('contact_search_enabled', True), bool):
+        raise ValueError('contact_search_enabled must be a boolean')
     if opts.get('email_verification_mode', 'quick') not in {'quick', 'power'}:
         raise ValueError('email_verification_mode must be quick or power')
     if opts.get('discovery_strategy', 'keywords') not in {'keywords', 'similar', 'hybrid'}:
@@ -491,26 +513,33 @@ def validate_options(opts):
 
 
 def verify_customs(company, session, opts):
+    company.import_evidence_status = 'requested'
     body = {'start_time':opts['customs_start'],'end_time':opts['customs_end'],'product':'',
         'buyer':company.company_name,'importer_country':str(opts['customs_importer_country']),
         'exporter_country':str(opts['customs_exporter_country']), 'recordType':'Import','limit':10,'page':1}
     result = session.call('customs.search',body)
     if not result:
+        company.import_evidence_status = 'unavailable'
         return
+    company.import_evidence_citation = citation(result)
     # Query matching is fuzzy upstream. Only evidence tied to this exact buyer is accepted.
     matched = {}
     for record in unpack(result['response'],'records'):
         buyer = record.get('buyer') or {}
         name = buyer.get('name') or record.get('importer_company_name')
         bd = company_domain(buyer)
+        if bd and bd != domain(company.website):
+            continue
         if not (bd and bd == domain(company.website)) and normalize_company_name(name) != normalize_company_name(company.company_name):
             continue
         key = record.get('snow_flake_id') or record.get('id') or json.dumps(record,sort_keys=True)
         matched[key] = record
     if not matched:
+        company.import_evidence_status = 'no_exact_match'
         note(company,'No exact buyer match in customs sample; import status remains unknown')
         return
     codes = sorted({str(r.get('hs_code')).strip() for r in matched.values() if r.get('hs_code')})
+    company.import_evidence_status = 'matched_sample'
     put(company,'hs_codes',codes,citation(result),.7)
     put(company,'shipment_frequency',f"{len(matched)} sampled customs records ({opts['customs_start']} to {opts['customs_end']}; not annual frequency)",citation(result),.6)
     note(company,'Matched customs sample; amount, currency and full-year procurement not inferred')
@@ -519,6 +548,7 @@ def verify_customs(company, session, opts):
 def preview(profiles, config, max_results=None):
     opts = config.get('tradewind',{})
     validate_options(opts)
+    reviews = qualification.load_reviews(opts.get('product_evidence_file'), opts.get('product_aliases', {}))
     limit = max_results or config.get('pipeline',{}).get('max_results_per_customer',10)
     if not 1 <= limit <= 100:
         raise ValueError('max_results_per_customer must be 1..100')
@@ -528,6 +558,7 @@ def preview(profiles, config, max_results=None):
             requests.append({'seed':profile.customer_id,'operation':'company.search','body':body,
                              'reserve':str(estimate(prepare('company.search',body)))})
     return {'mode':'preview','network_calls':0,'requests':requests,
+            'product_review_records':len(reviews),'contact_search_enabled':opts.get('contact_search_enabled',True),
             'max_credits':str(opts.get('max_credits','2')),'max_enrich':opts.get('max_enrich',5),
             'next_steps':'Company details, optional customs, people search, identity-based people enrich, optional email verification',
             'warning':'Dependent requests use discovered identities; budget is a local planning limit, not provider hard cap'}

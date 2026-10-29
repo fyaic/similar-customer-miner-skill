@@ -35,6 +35,8 @@ def export_results(
             df.to_excel(writer, sheet_name="Results", index=False)
             # Styled, human-facing lead list as the first tab.
             _write_leads_sheet(writer.book, companies)
+            if '_review_queue' in config:
+                _write_review_sheet(writer.book, config['_review_queue'])
             if config.get("output", {}).get("include_summary_sheet", True):
                 _write_summary_sheet(writer.book, companies, config)
             _style_results_sheet(writer.book)
@@ -91,6 +93,10 @@ def _to_row(company: SimilarCompany) -> Dict[str, Any]:
     row["email_verification_citation"] = company.email_verification_citation
     row["contact_role_fit"] = company.contact_role_fit
     row["product_match_status"] = company.product_match_status
+    for field in ['product_match_reason', 'product_evidence_citation', 'product_evidence_checked_at',
+                  'product_evidence_reviewer', 'product_evidence_excerpt', 'business_role',
+                  'business_role_citation', 'import_evidence_status', 'import_evidence_citation', 'buyer_qualification']:
+        row[field] = getattr(company, field)
     row["notes"] = company.notes
     row["all_citations"] = str(company.all_citations) if company.all_citations else None
     return row
@@ -150,6 +156,9 @@ def _write_summary_sheet(workbook, companies: List[SimilarCompany], config: Opti
         ("Grade C", counts.get("C", 0)),
         ("通过事实核查", passed),
     ]
+    if '_review_queue' in config:
+        stats.extend([('待复核公司（未计入线索）', len(config['_review_queue'])),
+                      ('有海关样本（非采购意向）', sum(c.import_evidence_status == 'matched_sample' for c in companies))])
     r = 3
     for label, val in stats:
         ts.data_cell(ws, r, 1, label)
@@ -264,7 +273,7 @@ def _write_leads_sheet(workbook, companies: List[SimilarCompany]) -> None:
     ws = workbook.create_sheet("线索名单", 0)
     ncols = len(_LEADS_HEADERS)
 
-    ts.section_title(ws, 1, ncols, f"相似买家线索名单 · 共 {len(companies)} 家 · 按优先级排序")
+    ts.section_title(ws, 1, ncols, f"相似公司候选名单 · 共 {len(companies)} 家 · 采购身份待核")
     ts.header_row(ws, 2, _LEADS_HEADERS)
 
     r = 3
@@ -297,10 +306,28 @@ def _write_leads_sheet(workbook, companies: List[SimilarCompany]) -> None:
         ts.data_cell(ws, r, 10, social or "—", secondary=not social)
         ts.data_cell(ws, r, 11, proc_text or "—", bg=proc_bg, secondary=not proc_text)
         ts.data_cell(ws, r, 12, (c.all_citations or {}).get("datasource", ""), align="center", secondary=True)
-        ts.data_cell(ws, r, 13, c.notes or "", secondary=True)
+        qualification_note = ''
+        if c.all_citations.get('datasource') == 'tradewind':
+            qualification_note = f'产品证据：{c.product_match_status}\n业务角色（描述线索）：{c.business_role}\n进口证据：{c.import_evidence_status}；采购身份待核\n'
+        ts.data_cell(ws, r, 13, qualification_note + (c.notes or ""), secondary=True)
         r += 1
 
     ts.set_widths(ws, _LEADS_WIDTHS)
+    ts.freeze_header(ws, first_data_row=3)
+
+
+def _write_review_sheet(workbook, candidates):
+    ws = workbook.create_sheet('待复核', 1)
+    headers = ['种子客户', '公司名', '官网', '国家', '目标产品', '供应商简介', '待核原因', '下一步']
+    ts.section_title(ws, 1, len(headers), f'待复核 · {len(candidates)} 家 · 不计入已佐证线索')
+    ts.header_row(ws, 2, headers)
+    for r, c in enumerate(candidates, 3):
+        values = [c['source_seed'], c['company_name'], c['website'], c['country'],
+                  '; '.join(c['requested_products']), c['provider_description'], c['reason'], c['next_action']]
+        for col, value in enumerate(values, 1):
+            ts.data_cell(ws, r, col, value)
+        _website_cell(ws, r, 3, c['website'])
+    ts.set_widths(ws, [18, 28, 35, 10, 24, 48, 48, 48])
     ts.freeze_header(ws, first_data_row=3)
 
 

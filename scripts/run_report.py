@@ -97,6 +97,8 @@ def main(argv=None):
         d = tw.get('discovery', {})
         lines.append(f"- Trade Wind 候选: {tw.get('candidate_count', 0)}；种子排除: {d.get('excluded_seed', 0)}；去重: {d.get('duplicates', 0)}；国家/身份隔离: {d.get('country_mismatch', 0)}")
         lines.append(f"- 发现候选: {tw.get('discovered_candidates', '?')}；产品未佐证: {tw.get('product_unconfirmed_count', 0)}")
+        lines.append(f"- 待复核（不计入线索）: {tw.get('review_queue_count', 0)}；官网证据复核入选: {tw.get('reviewed_product_matches', 0)}；排除: {tw.get('excluded_count', 0)}")
+        lines.append(f"- 待复核文件: {stats.get('review_file', '未生成')}；产品证据不证明进口或采购意向。")
         lines.append(f"- 公司补全: {tw.get('enriched_companies', '?')}；待补全: {tw.get('enrichment_deferred_count', '?')}")
         lines.append(f"- 具名候选: {tw.get('named_contacts', 0)}；职位关键词匹配: {tw.get('role_matched_contacts', 0)}；已验证邮箱: {tw.get('verified_mailboxes', 0)}")
         lines.append(f"- 本次新增已知费用: {tw.get('new_credits_known', '?')} credits；复用请求: {tw.get('reused_requests', 0)}；未决账单: {tw.get('budget', {}).get('unresolved_operations', '?')}")
@@ -111,6 +113,11 @@ def main(argv=None):
     if tw and evidence_path.exists():
         evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
         rejected = evidence.get('quarantined', [])
+        queue = evidence.get('review_queue', [])
+        if queue:
+            lines.append('## 待补产品证据（未判为无关）')
+            for item in queue:
+                lines.append(f"- {item.get('company_name', '?')} ({item.get('website', '')}): {item.get('reason', '')}")
         if rejected:
             lines.append("## 未进入销售页的候选（保留复核）")
             for item in rejected:

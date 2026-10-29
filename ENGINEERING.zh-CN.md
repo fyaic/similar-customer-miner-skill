@@ -1,19 +1,21 @@
-# 工程说明 · Trade Wind 2.0.0rc2
+# 工程说明 · Trade Wind 2.0.0rc3
 
-本文件对应 `codex/tradewind-v2`。原架构在 main/Git 历史可查；旧 Apify/Hunter 配置和脚本不再指导新版在线运行。
+本文件对应 `codex/tradewind-v2-rc3`。原架构在 main/Git 历史可查；旧 Apify/Hunter 配置和脚本不再指导新版在线运行。
 
 在线链路为 `parser → profiler → tradewind.mine → scoring → exporter`。CLI 不加载 local/secrets YAML，并清空旧凭证；便携入口为 `scripts/run.py`。demo/test 保留离线旧实现。Trade Wind 客户端、同账户 SQLite 账本、鉴权域名限制、禁止重定向、脱敏和精确缓存复用沿用海外同行项目经验。
 
-发现阶段保留产品短语，限制每个种子的请求数；可选 hybrid 同时使用公司锚点。按域名/名称精确去重，按画像适配度安排有界补全。产品筛选采用供应商描述/行业中的词项匹配，不做同义词扩展，也不证明进口身份；默认将未知/未佐证候选留在证据中。国家补全后复检，冲突隔离，缺失不冒充已核实。跨种子重复公司暂保留首次归属。
+发现阶段保留产品短语、按种子限额；按域名/名称精确去重。`src/qualification.py` 采用连续词项匹配、显式同义词、否定句保护和种子/域名/产品绑定的复核证据。无匹配只代表 needs_review，不代表无关。官网复核记录需 HTTPS 同域链接、摘录、复核者和90天内带时区时间；记录加载失败在收费前终止。正向摘录须包含产品/别名；多产品公司只有所有目标产品明确负向才排除。程序不自动读取或认证官网内容。
+
+在线输出新增待复核页和私有 `.review.json`，CSV/Markdown也保留队列。已佐证候选优先补全；国家/身份冲突优先隔离，产品正向证据不能覆盖冲突。明确无关的公司不查联系人。`contact_search_enabled: false` 只做公司筛选，不调用人员/邮箱。企业角色仅是供应商描述提示，进口样本与采购身份分开；跨种子归属仍为首次匹配。
 
 联系人采用职位启发式排序：采购/供应链、运营、企业负责人备选。无关或未知职位不写为主联系人；必须匹配公司和个人工作邮箱域名。邮箱验证支持官方 result 和兼容 data 响应，校验同一地址、7天内证据、valid、可投递、catch-all 明确 false；核验来源/时间独立于邮箱发现来源。当前任职和采购权均待核。
 
-评分按实际目标国家计算；海关样本条数不再充当发货强度或年频次。A/B/C 是字段置信度，不是客户质量评级，也不能代替触达前核验。Excel 保持三页布局，增加产品匹配、职位匹配和邮箱核验审计列。运行报告按 Trade Wind 的费用、复用、筛除和未决状态生成。
+评分按实际目标国家计算；海关样本条数不再充当发货强度或年频次。A/B/C 是字段置信度，不是客户质量评级，也不能代替触达前核验。在线 Excel 为四页布局，包含待复核页，增加产品匹配、职位匹配和邮箱核验审计列。运行报告按 Trade Wind 的费用、复用、筛除和未决状态生成。
 
 维护验证：`python -m pytest -q tests`；同一 `tests/test_business_acceptance.py` 在 rc1 和 rc2 分别运行。用例针对已知风险，不是随机市场效果基准。真实脚本 `scripts/validate_live.py` 显式收费，必须复用已有账本并设置累计预算。原始客户响应、邮件地址和 key 不入公共仓库。
 
 版本由 `src/tradewind_core/__init__.py` 供运行与打包引用；发布时同步 pyproject、default.yaml、SKILL、双语 README 和审查记录。包生成逐文件 MANIFEST 与内部 DISTRIBUTION 元数据；在独立安装目录验证入口、配置来源、导出和清单。验收依据见 [发布审查](docs/RELEASE_REVIEW.md) 与 [验证摘要](docs/validation.json)。
 
-分发策略：`scripts/build_skill.py` 仅包含接收者所需的代码、配置、接口参考、输入样例、README 和 SKILL；排除整个 docs 目录、工程说明、测试及评测脚本。API目录中的 `live_verified`/`live_scope` 内部探测注记仅在打包时移除，接口契约保持不变。内置 key 只写入 `.credentials/tradewind.env`，MANIFEST/DISTRIBUTION 标记 `distribution_profile: recipient`。内部报告留在仓库和本地验收目录，独立管理。运行版号仍为 rc2；分发范围调整以源码提交和包校验值区分。
+分发策略：`scripts/build_skill.py` 仅包含接收者所需的代码、配置、接口参考、输入样例、README 和 SKILL；排除整个 docs 目录、工程说明、测试及评测脚本。API目录中的 `live_verified`/`live_scope` 内部探测注记仅在打包时移除，接口契约保持不变。内置 key 只写入 `.credentials/tradewind.env`，MANIFEST/DISTRIBUTION 标记 `distribution_profile: recipient`。内部报告留在仓库和本地验收目录，独立管理。运行版号为 rc3；rc2 标签与分发包保留不覆盖，旧报告归档于 docs/releases/2.0.0rc2。
 
 构建：`python scripts/build_skill.py --output /private/path/skill.zip --key-file /private/path/tradewind.env --recipient sps`。检查包内 Markdown 本地链接、排除清单、凭证唯一位置和独立目录 doctor；不要把验收目录附入交付包。

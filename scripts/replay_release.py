@@ -20,6 +20,8 @@ def main():
     p.add_argument('--responses', required=True, help='Private JSON: method/path/body/response records')
     p.add_argument('--output-dir', required=True)
     p.add_argument('--company-only', action='store_true', help='Disable person enrichment/email verification in both versions')
+    p.add_argument('--product-evidence-file', help='Optional operator reviews, separate from frozen API response evidence')
+    p.add_argument('--no-contact-search', action='store_true', help='rc3 qualification-only replay, never a contact-coverage comparison')
     a = p.parse_args()
     sys.path.insert(0, str(Path(a.source_root).resolve()))
     from src import tradewind as tw
@@ -34,6 +36,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     missing = []
     summary = {'mode': 'frozen_response_replay', 'network_calls': 0, 'actual_new_credits': '0', 'company_only': a.company_only,
+               'contact_search_enabled':not a.no_contact_search, 'external_product_reviews':bool(a.product_evidence_file),
                'response_library_sha256': hashlib.sha256(fixture).hexdigest(), 'cases': []}
     def send(method, url, body, headers, timeout):
         key = fingerprint(method, url.removeprefix('https://app.trade-wind.co'), body)
@@ -56,6 +59,10 @@ def main():
             _apply_runtime_mode(cfg, 'live')
             cfg['pipeline'].update(target_countries=[country], max_results_per_customer=3)
             cfg['tradewind'].update(state_dir=str(Path(temp)/case), max_credits='100', max_enrich=enrich, verify_email=not a.company_only, enrich_people=not a.company_only)
+            if a.product_evidence_file:
+                cfg['tradewind']['product_evidence_file'] = a.product_evidence_file
+            if a.no_contact_search:
+                cfg['tradewind']['contact_search_enabled'] = False
             original_mine = tw.mine
             with patch.object(tw, 'settings', return_value={'key': 'replay-fixture', 'base': 'https://app.trade-wind.co', 'insight_prefix': '/api/insight', 'state': temp}), \
                  patch.object(tw, 'mine', side_effect=lambda profiles, config, path: original_mine(profiles, config, path, send=send)):
@@ -67,6 +74,8 @@ def main():
                     'product_status': getattr(c, 'product_match_status', None)} for c in companies],
                 'stop_reason': stats.get('stop_reason'),
                 'product_unconfirmed': stats.get('product_unconfirmed_count', 0)})
+            summary['cases'][-1].update(review_queue_count=stats.get('review_queue_count', 0),
+                reviewed_product_matches=stats.get('reviewed_product_matches', 0))
             stats_path = out/(case+'.stats.json')
             saved = json.loads(stats_path.read_text())
             saved.update(mode='frozen_response_replay', actual_new_credits='0', network_calls=0,

@@ -160,6 +160,16 @@ class SimilarCompany:
     email_verified_at: Optional[str] = None
     email_verification_citation: Optional[str] = None
     product_match_status: str = 'unreviewed'
+    product_match_reason: Optional[str] = None
+    product_evidence_citation: Optional[str] = None
+    product_evidence_checked_at: Optional[str] = None
+    product_evidence_reviewer: Optional[str] = None
+    product_evidence_excerpt: Optional[str] = None
+    business_role: str = 'unknown'  # Provider text hint, not independently verified.
+    business_role_citation: Optional[str] = None
+    import_evidence_status: str = 'not_checked'
+    import_evidence_citation: Optional[str] = None
+    buyer_qualification: str = 'unverified'
     contact_role_fit: Optional[bool] = None  # Title heuristic only, not employment verification
 
     # Social links (per-platform citation/confidence)

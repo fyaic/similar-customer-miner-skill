@@ -1,0 +1,79 @@
+{
+  "version": "2.0.0rc2",
+  "date": "2026-10-29",
+  "release_scope": "Internal pilot with human review; sales-performance uplift not established",
+  "baseline_commit": "ba828470a9ef6595f2e301e361067f902b5cd657",
+  "tests": {
+    "full_suite_passed": 99,
+    "warnings": 1,
+    "paired_business_cases": 29,
+    "rc1_passed": 6,
+    "rc1_failed": 23,
+    "rc2_passed": 29,
+    "selection": "Risk-targeted cases, not a random market sample"
+  },
+  "live": {
+    "markets": [
+      "US",
+      "CA",
+      "GB"
+    ],
+    "products": [
+      "faucet",
+      "packaging",
+      "hand tools"
+    ],
+    "final_discovered_candidates": 9,
+    "final_exported_candidates": 3,
+    "final_named_contact_candidates": 2,
+    "title_matched_procurement_or_operations": 1,
+    "verified_mailboxes": 0,
+    "importer_status_verified": 0,
+    "all_exported_grades": "C",
+    "company_detail_requests_in_final_scope": 7,
+    "deferred_company_details": 2,
+    "email_checks_total": 9,
+    "quick_checks": 8,
+    "power_checks": 1,
+    "power_result": "catch_all",
+    "new_credits_this_review": "5.46",
+    "historical_credits_before_review": "2.88",
+    "cumulative_credits": "8.34",
+    "unresolved_billing": 0,
+    "source": "Persisted Trade Wind receipts; no legacy API key used",
+    "country_case_outputs": {
+      "faucet-us": 2,
+      "packaging-ca": 1,
+      "tools-gb": 0
+    }
+  },
+  "replay": {
+    "network_calls": 0,
+    "actual_new_credits": "0",
+    "company_only": true,
+    "person_enrichment": false,
+    "email_verification": false,
+    "rc1_candidates": [
+      3,
+      3,
+      3
+    ],
+    "rc2_candidates": [
+      2,
+      1,
+      0
+    ],
+    "frozen_response_library_sha256": "f36b0608e6fe04ba73a1c002fb2db39e71776e93f81e969c79d5f71139c18791",
+    "private_library_records": 39,
+    "missing_responses": 0,
+    "notes": "Both checkouts use the same frozen response library keyed by exact request. Phrase preservation intentionally changes the GB request. Full-person replay was incomplete and is not used for acceptance."
+  },
+  "optional_customs_live_tested": false,
+  "email_verification_live_tested": true,
+  "limitations": [
+    "Conservative lexical product matching can exclude relevant companies with incomplete descriptions",
+    "No HS-only discovery or end-to-end import-buyer qualification",
+    "No verified employment or buying authority; no verified mailbox in this sample",
+    "No comprehensive legacy Apify/Hunter performance baseline; original keys remain unused"
+  ]
+}

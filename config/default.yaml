@@ -2,7 +2,7 @@
 
 project:
   name: "similar-customer-miner"
-  version: "2.0.0rc2"
+  version: "2.0.0rc3"
 
 input:
   # Supported formats: xlsx, csv, md
@@ -85,7 +85,9 @@ tradewind:
   max_credits: "2"
   max_enrich: 5
   cache_days: 7
-  require_product_match: true  # Uncorroborated candidates stay in evidence, not the sales sheet
+  require_product_match: true  # Uncorroborated candidates enter the visible review queue
+  product_aliases: {}        # Explicit domain-specific equivalents, e.g. faucet: [water taps]
+  contact_search_enabled: true # false: company qualification only, no people/mailbox calls
   discovery_strategy: keywords  # keywords / similar / hybrid
   max_discovery_queries: 2    # max 3 product terms per query; preview shows the actual scope
   people_source: hunter

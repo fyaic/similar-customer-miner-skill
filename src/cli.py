@@ -46,6 +46,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-credits", default=None, help="Local cumulative credit budget (not provider hard cap)")
     p.add_argument("--state-dir", default=None, help="Private billing/cache state directory")
     p.add_argument("--env-file", default=None, help="Explicit Trade Wind env file override")
+    p.add_argument("--product-evidence-file", default=None, help="Dated official-page product reviews JSON")
     p.add_argument("--dry-run", action="store_true", help="Write request preview without network or credentials")
     p.add_argument("--log-level", default="INFO", help="Logging level")
     return p
@@ -56,7 +57,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     load_local = False  # v2 never loads legacy local.yaml/secrets.yaml credentials
     config = config_loader.load_config(args.config, load_local=load_local)
     _apply_runtime_mode(config, args.mode)
-    for key in ("max_credits", "state_dir", "env_file"):
+    for key in ("max_credits", "state_dir", "env_file", "product_evidence_file"):
         if getattr(args, key) is not None:
             config.setdefault("tradewind", {})[key] = getattr(args, key)
     if args.dry_run:
