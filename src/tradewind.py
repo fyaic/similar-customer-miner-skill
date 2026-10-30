@@ -204,6 +204,7 @@ class Session:
         self.started_at = datetime.now(timezone.utc).isoformat()
         cfg = config.get('tradewind', {})
         self.settings = settings(cfg.get('env_file'))
+        self.settings['proxy_mode'] = cfg.get('proxy_mode', 'system')
         if not self.settings['key']:
             raise ValueError('Missing TRADEWIND_API_KEY; internal package must retain .credentials/')
         namespace = hashlib.sha256(self.settings['key'].encode()).hexdigest()[:16]
@@ -229,6 +230,8 @@ class Session:
         op_id = None
         ttl = self.config.get('tradewind', {}).get('cache_days', 7)
         for row in rows:
+            if row['state'] == 'not_sent':
+                continue  # safe to attempt once on a later user-invoked run; no automatic retry
             age = (datetime.now(timezone.utc)-datetime.fromisoformat(row['created'])).total_seconds()/86400
             if row['state'] != 'completed' or not row['billing_known'] or age < ttl:
                 op_id = row['id'];break
@@ -250,12 +253,13 @@ class Session:
         elif result.get('credits') is not None:
             self.new_credits += Decimal(result['credits'])
         if result['state'] != 'completed':
-            self.stop_reason = 'Operation '+op_id+' is '+result['state']+'; inspect billing before retry'
+            self.stop_reason = ('连接被拒绝，HTTP请求未发出；本地预留已释放。先运行 diagnose 检查网络/代理，修复后再执行。' if result['state']=='not_sent' else 'Operation '+op_id+' is '+result['state']+'; inspect billing before retry')
             return None
         return result
 
     def report(self):
-        return {'provider':'tradewind','run_started_at':self.started_at,'new_credits_known':str(self.new_credits),
+        return {'provider':'tradewind','run_started_at':self.started_at,
+                'connection_refused':any(e.get('state') == 'not_sent' for e in self.events),'new_credits_known':str(self.new_credits),
                 'reused_requests':self.reused,'budget':self.store.budget(),'stop_reason':self.stop_reason,
                 'operations':self.events,'warning':'Local planning budget, not provider hard cap; results are unreviewed candidates'}
 
@@ -520,6 +524,8 @@ def mine(profiles, config, output_path, send=None):
 
 def validate_options(opts):
     qualification.validate_aliases(opts.get('product_aliases', {}))
+    if opts.get('proxy_mode', 'system') not in {'system','direct'}:
+        raise ValueError('proxy_mode must be system or direct')
     if type(opts.get('people_per_page', 5)) is not int or not 1 <= opts.get('people_per_page', 5) <= 100:
         raise ValueError('people_per_page must be 1..100')
     titles = opts.get('people_job_titles', [])

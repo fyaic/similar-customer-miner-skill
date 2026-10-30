@@ -1,6 +1,6 @@
-# Engineering · Trade Wind 2.0.0rc4
+# Engineering · Trade Wind 2.0.0rc5
 
-This describes the current `codex/tradewind-v2-rc4` branch. The legacy architecture is available in Git history/main; its Apify/Hunter modules and credential setup are not the v2 live pipeline.
+This describes the current `codex/tradewind-v2-rc5` branch. The legacy architecture is available in Git history/main; its Apify/Hunter modules and credential setup are not the v2 live pipeline.
 
 `parser → profiler → tradewind.mine → scoring → exporter` is the live path. Demo/test retains the old offline helpers. The CLI ignores local/secrets YAML and clears legacy credentials. `scripts/run.py` is the portable skill entrypoint. `src/tradewind_core` provides the account-scoped SQLite ledger, host allowlist, no redirects, response redaction and exact-query reuse inherited from sps-overseas-peers.
 
@@ -26,4 +26,8 @@ Explicit execution mode; per-query/company stage coverage; local ledger receipt 
 
 ## Release identity
 
-See [release management](docs/RELEASES.md) and the [fixed rc4 delivery record](docs/DELIVERY_RC4.md). The delivered ZIP remains tied to tag v2.0.0rc4 / 85f3fd2. Documentation-only maintenance may advance this branch without moving the tag or replacing the package. Runtime and bundled-document changes require a new release identity.
+See [release management](docs/RELEASES.md) and the [fixed rc4 delivery record](docs/DELIVERY_RC4.md). The delivered ZIP remains tied to tag v2.0.0rc5 / 85f3fd2. Documentation-only maintenance may advance this branch without moving the tag or replacing the package. Runtime and bundled-document changes require a new release identity.
+
+## rc5 connection incident
+
+Typed urllib connection-refused errors are classified not_sent and release only that attempt's reservation; timeouts/resets remain unknown. No in-call retries. The account ledger preserves prior attempts and opt-in rc4 migration archives originals transactionally in network_recoveries. Network diagnosis uses credential-free HEAD with the same system proxy; direct mode is explicit only. --trial bounds the first seed, discovery query and enrichment. Business output includes .status.md; JSON remains diagnostic evidence. See docs/RELEASE_REVIEW.md for current evidence; rc4 delivery identity remains historical and unchanged.

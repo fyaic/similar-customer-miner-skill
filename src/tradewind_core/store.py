@@ -155,3 +155,19 @@ class Store:
 
     def operations(self):
         return [dict(r) for r in self.db.execute('SELECT id,method,path,state,held,charged,billing_known,request_id,task_id,created,updated,notes FROM operations ORDER BY created')]
+
+    def recover_refused(self, apply=False):
+        from .network import legacy_refusal
+        with self.transaction():
+            rows=[dict(r) for r in self.db.execute('SELECT * FROM operations')]
+            candidates=[r for r in rows if legacy_refusal(r)]
+            if apply:
+                self.db.execute('CREATE TABLE IF NOT EXISTS network_recoveries(id TEXT PRIMARY KEY, original TEXT NOT NULL, recovered_at TEXT NOT NULL)')
+                for row in candidates:
+                    self.db.execute('INSERT INTO network_recoveries VALUES(?,?,?)', (row['id'],json.dumps(row,ensure_ascii=False),now()))
+                    payload=json.loads(row['response'])
+                    payload.update(failure_phase='connect_refused',billing_basis='archived_rc4_winerror_10061',transport='legacy_unproven')
+                    self.db.execute("UPDATE operations SET state='not_sent',held=0,charged=0,billing_known=1,response=?,updated=?,notes=? WHERE id=?",
+                        (json.dumps(payload,ensure_ascii=False),now(),'Recovered rc4 WinError 10061; original preserved in network_recoveries',row['id']))
+            return {'applied':apply,'matched_operations':[r['id'] for r in candidates],
+                    'preserved_history':True,'network_calls':0}

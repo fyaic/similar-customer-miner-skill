@@ -2,7 +2,7 @@
 
 project:
   name: "similar-customer-miner"
-  version: "2.0.0rc4"
+  version: "2.0.0rc5"
 
 input:
   # Supported formats: xlsx, csv, md
@@ -82,6 +82,7 @@ cache:
 
 # v2 live path: Trade Wind only. Values below never contain credentials.
 tradewind:
+  proxy_mode: system  # direct requires an explicit per-run/operator choice
   max_credits: "2"
   max_enrich: 5
   cache_days: 7

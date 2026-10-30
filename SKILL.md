@@ -2,7 +2,7 @@
 name: similar-customer-miner
 description: 根据高价值客户的 CSV/Excel 名单，使用 Trade Wind 查找相似海外 B2B 买家、补充公司与联系人，输出带来源、评分和待核事项的销售 Excel。适用于相似客户拓展和外贸买家挖掘。
 metadata:
-  version: "2.0.0rc4"
+  version: "2.0.0rc5"
 ---
 
 # 相似客户挖掘 · Trade Wind
@@ -21,6 +21,12 @@ python /path/to/similar-customer-miner/scripts/run.py --input customers.csv --ou
 ```
 
 内部包已内置 key，保留 `.credentials/` 与 `DISTRIBUTION.json`；`doctor` 可检查配置来源但不显示 key。只有用户要求切换账户时才使用 `--env-file`。通用包用 `TRADEWIND_API_KEY` 或工作目录 `.env`。执行必须显式选择 `--mode live`、`demo` 或 `test`；只有 dry-run 可省略模式。demo/test 是离线合成示例，不能当真实线索交付。
+
+## 首次使用和小样本试跑
+
+首次在当前机器运行或遇到网络失败，先执行不带key、不收费的 `tradewind_ops.py diagnose`。遵循[网络诊断与恢复](references/network-recovery.md)自行检查并给出一次完整说明；不要反复让业务查日志。用户说“先试几条”时必须使用 `--trial`，仅首个种子、至多3家公司、补全1家，不能查100条。沿用原state-dir及累计预算，不擅自扩大预算。旧rc4明确10061记录可按该流程审计恢复；其他未知费用不得清除。不能自动绕过系统代理。
+
+交付Excel和同名.status.md中文说明，原始JSON作为内部证据，不作为业务侧的主要回答。
 
 ## 正式任务完成门槛
 
@@ -46,3 +52,5 @@ python /path/to/similar-customer-miner/scripts/run.py --input customers.csv --ou
 本技能用于候选发现与人工复核；产品关联不证明进口采购身份，邮箱核验不证明任职或采购权。
 
 分发包不含内部对比评测报告、测试摘要、客户名单结果、历史账本或旧 API key。内置凭证包仅限内部授权使用，普通安装不需要用户申请或替换 key。
+
+CLI遇到新的明确连接拒绝后，会自动做一次不带凭证的网络检查，将说明附加到.status.md，诊断细节存为.diagnostics.json；无需让业务再发起一次诊断。

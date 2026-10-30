@@ -41,6 +41,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--config", default=None, help="Path to config YAML")
     p.add_argument("--mode", default=None, choices=["demo", "test", "live"], help="Runtime mode")
     p.add_argument("--allow-cached", action="store_true", help="Accept a complete cached batch; never classify it as a new online case")
+    p.add_argument("--trial", action="store_true", help="First seed only, up to 3 candidates and 1 enrichment; preserve cumulative budget")
+    p.add_argument("--proxy-mode", choices=["system", "direct"], default=None, help="System proxy by default; direct is an explicit per-run override")
     p.add_argument("--no-local", action="store_true", help="Do not load config/local.yaml or config/secrets.yaml")
     p.add_argument("--max-results", type=int, default=None, help="Max candidates per seed")
     p.add_argument("--grade", default="C", choices=["A", "B", "C"], help="Minimum grade to output")
@@ -61,12 +63,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     load_local = False  # v2 never loads legacy local.yaml/secrets.yaml credentials
     config = config_loader.load_config(args.config, load_local=load_local)
     _apply_runtime_mode(config, args.mode)
-    for key in ("max_credits", "state_dir", "env_file", "product_evidence_file"):
+    for key in ("max_credits", "state_dir", "env_file", "product_evidence_file", "proxy_mode"):
         if getattr(args, key) is not None:
             config.setdefault("tradewind", {})[key] = getattr(args, key)
+    if args.trial:
+        config.setdefault("runtime", {})["trial"] = True
+        config.setdefault("pipeline", {})["max_results_per_customer"] = min(3, args.max_results if args.max_results is not None else config.get("pipeline", {}).get("max_results_per_customer", 3))
+        config.setdefault("tradewind", {})["max_enrich"] = min(1, config.get("tradewind", {}).get("max_enrich", 1))
+        config["tradewind"]["max_discovery_queries"] = 1
+        args.max_results = config["pipeline"]["max_results_per_customer"]
     if args.dry_run:
         profiles = profiler.profile_customers(parser.parse_customers(args.input, config.get("input", {}).get("column_aliases", {})))
+        if args.trial: profiles = profiles[:1]
         preview = tradewind.preview(profiles, config, args.max_results)
+        preview["trial"] = args.trial
         from src.tradewind_core.security import private_json
         private_json(args.output, preview)
         print("Preview written; no API calls")
@@ -80,7 +90,16 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     try:
         run_pipeline(args.input, args.output, config, min_grade=args.grade)
-        audit = config.get("_run_stats", {}).get("tradewind", {}).get("execution_audit", {})
+        tw_stats = config.get("_run_stats", {}).get("tradewind", {})
+        if args.mode == "live" and tw_stats.get("connection_refused"):
+            from src.tradewind_core.network import diagnose
+            from src.tradewind_core.security import private_json
+            diagnosis = diagnose(config.get("tradewind", {}).get("proxy_mode", "system"))
+            private_json(Path(args.output).with_suffix('.diagnostics.json'), diagnosis)
+            with Path(args.output).with_suffix('.status.md').open('a', encoding='utf-8') as status:
+                status.write("\n自动网络检查：" + diagnosis['next_action'] + "\n")
+            print(diagnosis['next_action'], file=sys.stderr)
+        audit = tw_stats.get("execution_audit", {})
         if args.mode == "live" and (not audit.get("coverage_complete") or not (audit.get("new_online_case") or args.allow_cached and audit.get("cached_or_live_complete"))):
             print("Partial output saved; inspect .audit.json, .stats.json and .evidence.json", file=sys.stderr)
             return 2
@@ -112,6 +131,8 @@ def run_pipeline(input_path: str, output_path: str, config: Dict[str, Any], min_
     aliases = config.get("input", {}).get("column_aliases", {})
     customers: List[Customer] = parser.parse_customers(input_path, aliases)
     profiles: List[CustomerProfile] = profiler.profile_customers(customers)
+    if config.get("runtime", {}).get("trial"):
+        profiles = profiles[:1]
     logger.info("Parsed %d customers, generated %d profiles", len(customers), len(profiles))
 
     if config.get("runtime", {}).get("mode") == "live":
@@ -153,6 +174,16 @@ def run_pipeline(input_path: str, output_path: str, config: Dict[str, Any], min_
         logger.warning("Could not write run stats: %s", exc)
 
     logger.info("Pipeline complete: %d companies exported", len(filtered))
+    if config.get("runtime", {}).get("mode") == "live":
+        tw = config.get("_run_stats", {}).get("tradewind", {})
+        audit = tw.get("execution_audit", {})
+        text = ("# 本次查询说明\n\n"
+            + ("本次为小样本试跑：仅首个种子，最多3家候选、补全1家。\n\n" if config.get("runtime", {}).get("trial") else "")
+            + f"当前可交付候选：{len(filtered)}家；范围内完成：{audit.get('companies_complete',0)}/{audit.get('companies_planned',0)}家。\n\n"
+            + f"执行状态：{audit.get('classification','unproven')}。{tw.get('stop_reason') or '覆盖不足请查待复核队列和补全上限；缓存不算新增API案例。'}\n\n"
+            + f"本轮已确认费用：{tw.get('new_credits_known','unknown')} credits；本地预留不代表实际扣费。\n\n"
+            + "连接失败不等于查询到零客户；不会通过等待自动解锁，也不自动重复收费请求。诊断信息留给维护人员，业务侧交付本说明及Excel。\n")
+        Path(output_path).with_suffix('.status.md').write_text(text, encoding='utf-8')
     _print_summary(filtered)
     return filtered
 

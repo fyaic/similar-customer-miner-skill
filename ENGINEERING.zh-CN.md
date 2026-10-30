@@ -1,6 +1,6 @@
-# 工程说明 · Trade Wind 2.0.0rc4
+# 工程说明 · Trade Wind 2.0.0rc5
 
-本文件对应 `codex/tradewind-v2-rc4`。原架构在 main/Git 历史可查；旧 Apify/Hunter 配置和脚本不再指导新版在线运行。
+本文件对应 `codex/tradewind-v2-rc5`。原架构在 main/Git 历史可查；旧 Apify/Hunter 配置和脚本不再指导新版在线运行。
 
 在线链路为 `parser → profiler → tradewind.mine → scoring → exporter`。CLI 不加载 local/secrets YAML，并清空旧凭证；便携入口为 `scripts/run.py`。demo/test 保留离线旧实现。Trade Wind 客户端、同账户 SQLite 账本、鉴权域名限制、禁止重定向、脱敏和精确缓存复用沿用海外同行项目经验。
 
@@ -26,4 +26,8 @@
 
 ## 发布身份
 
-见[版本管理](docs/RELEASES.md)与[rc4固定交付记录](docs/DELIVERY_RC4.md)。交付ZIP对应v2.0.0rc4 / 85f3fd2；本次仅维护仓库文档，分支可前进，标签与包不变。运行行为或包内文档变化必须使用新的发布版本。
+见[版本管理](docs/RELEASES.md)与[rc4固定交付记录](docs/DELIVERY_RC4.md)。交付ZIP对应v2.0.0rc5 / 85f3fd2；本次仅维护仓库文档，分支可前进，标签与包不变。运行行为或包内文档变化必须使用新的发布版本。
+
+## rc5 connection incident
+
+Typed urllib connection-refused errors are classified not_sent and release only that attempt's reservation; timeouts/resets remain unknown. No in-call retries. The account ledger preserves prior attempts and opt-in rc4 migration archives originals transactionally in network_recoveries. Network diagnosis uses credential-free HEAD with the same system proxy; direct mode is explicit only. --trial bounds the first seed, discovery query and enrichment. Business output includes .status.md; JSON remains diagnostic evidence. See docs/RELEASE_REVIEW.md for current evidence; rc4 delivery identity remains historical and unchanged.

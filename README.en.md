@@ -1,4 +1,4 @@
-# Similar Customer Miner · Trade Wind 2.0.0rc4
+# Similar Customer Miner · Trade Wind 2.0.0rc5
 
 An internal pilot skill for finding product-related overseas B2B company candidates from CSV/Excel customer profiles. Live mode uses Trade Wind only; legacy Apify/Hunter credentials are disabled. Provider selection `hunter` means Trade Wind's upstream source, not a separate Hunter credential.
 
@@ -12,7 +12,7 @@ Outputs: live four-sheet Excel (`线索名单`, `待复核`, `Results`, `Summary
 
 **Usage scope:** candidate discovery with human review. Product relevance, importer status, current employment and buying authority require separate confirmation. See [skill instructions](SKILL.md), [workflow](references/workflow.md) and [API reference](references/tradewind.md).
 
-The recipient ZIP includes runtime code, configuration, examples and user instructions. Internal comparisons, evaluation reports, test summaries and engineering documents are excluded. `MANIFEST.json` records file hashes; `scripts/verify_package.py` checks them offline. Internal packages include the assigned Trade Wind key in `.credentials/`; retain that folder. rc4 supersedes rc3; install into a clean folder.
+The recipient ZIP includes runtime code, configuration, examples and user instructions. Internal comparisons, evaluation reports, test summaries and engineering documents are excluded. `MANIFEST.json` records file hashes; `scripts/verify_package.py` checks them offline. Internal packages include the assigned Trade Wind key in `.credentials/`; retain that folder. rc5 supersedes rc4; install into a clean folder.
 
 ## Execution coverage in rc4
 
@@ -21,3 +21,11 @@ New acquisition work must execute Trade Wind business APIs. Company research, he
 The .audit.json tracks each planned seed query and selected company. Product-review holds, missing domains, enrichment caps, missing receipts and billing stops return exit 2. Exit 0 requires complete scoped coverage and new real business receipts; --allow-cached explicitly accepts complete cached coverage without claiming a new online case. Historical receipts without transport provenance remain unproven. Empty results establish execution, not lead quality. Run scripts/audit_run.py leads.evidence.json --ledger /path/to/account/state.sqlite3 to compare the original ledger with request/response records. This is a local audit, not provider-signed attestation.
 
 Mailbox safe/role_account is normalized to valid only when deliverable and safe-to-send are both true. Verification also requires the matching address, a recent receipt, explicitly false catch-all and no explicit unsafe flag. Raw status and tri-state catch-all remain separate; a role mailbox never proves a named decision-maker.
+
+## rc5 network recovery / 网络恢复
+
+rc5 fixes connection-refused classification and failure provenance. Typed pre-connect refusal becomes `not_sent` with released local reserve; timeouts, resets and ambiguous billing still block retries. No automatic retry or proxy bypass. A strict opt-in `recover-refused --apply` command preserves and migrates matching rc4 WinError 10061 records; other unknowns remain blocked.
+
+先执行 `python /path/to/skill/scripts/tradewind_ops.py diagnose --output network-diagnostics.json`，无Trade Wind凭证、不调用收费业务API。小样本使用 `python /path/to/skill/scripts/run.py --input customers.csv --output trial.xlsx --mode live --trial`，首个种子、最多3家候选/补全1家。预算沿用原账户累计预算。给业务侧交付Excel及.status.md中文说明，失败不等于零客户。
+
+完整流程见[网络诊断与恢复](references/network-recovery.md)。Install rc5 into a new directory, retain .credentials, and keep the original working directory/account ledger. rc4 and earlier archives remain unchanged.

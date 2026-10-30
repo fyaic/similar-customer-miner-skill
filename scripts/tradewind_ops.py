@@ -18,6 +18,11 @@ def main(argv=None):
     p.add_argument('--state-dir')
     sub=p.add_subparsers(dest='command',required=True)
     sub.add_parser('doctor');sub.add_parser('usage');sub.add_parser('countries')
+    d=sub.add_parser('diagnose')
+    d.add_argument('--proxy-mode',choices=['system','direct'],default='system')
+    d.add_argument('--output')
+    recovery=sub.add_parser('recover-refused')
+    recovery.add_argument('--apply',action='store_true')
     r=sub.add_parser('reconcile')
     r.add_argument('operation_id');r.add_argument('--credits',required=True)
     r.add_argument('--state',choices=['completed','failed'],required=True)
@@ -27,10 +32,19 @@ def main(argv=None):
         print(json.dumps({'version':VERSION,'key_configured':bool(cfg['key']),
             'config_source':cfg['config_source'],'distribution':cfg['distribution'],
             'legacy_credentials_used':False,'network_calls':0},ensure_ascii=False,indent=2));return 0
+    if a.command=='diagnose':
+        from src.tradewind_core.network import diagnose
+        from src.tradewind_core.security import private_json
+        result=diagnose(a.proxy_mode)
+        if a.output: private_json(a.output,result)
+        print(json.dumps(result,ensure_ascii=False,indent=2))
+        return 0 if result['network_reachable'] else 2
     ns=hashlib.sha256(cfg['key'].encode()).hexdigest()[:16] if cfg['key'] else 'offline'
     store=Store(a.state_dir or cfg['state'],ns)
     try:
-        if a.command=='reconcile':
+        if a.command=='recover-refused':
+            result=store.recover_refused(a.apply)
+        elif a.command=='reconcile':
             store.reconcile(a.operation_id,a.credits,a.state,a.evidence)
             result={'budget':store.budget(),'operations':store.operations()}
         elif a.command=='countries':

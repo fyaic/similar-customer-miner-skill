@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0rc4",
+  "date": "2026-10-29",
+  "scope": "Recipient candidate tested; final clean-commit ZIP check kept beside private delivery",
+  "archive_files": 58,
+  "manifest_hashes": "passed",
+  "provided_key_only_in_credentials": "passed",
+  "internal_evaluation_excluded": "passed",
+  "local_markdown_links": "passed",
+  "independent_directory_doctor": "passed",
+  "ambient_key_ignored": "passed",
+  "legacy_keys_unused": "passed",
+  "portable_preview_with_review_file": "passed",
+  "installed_frozen_replay_candidates": [
+    2,
+    1,
+    1
+  ],
+  "installed_frozen_replay_queue": [
+    1,
+    2,
+    2
+  ],
+  "installed_live_new_business_requests": 9,
+  "installed_live_credits": "3.00",
+  "installed_live_company_coverage": "2/2",
+  "installed_final_candidate_cache_audit": "9 real receipts, network blocked, 0 new credits",
+  "raw_mailbox_fields_export": "passed"
+}

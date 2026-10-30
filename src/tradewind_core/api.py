@@ -11,6 +11,7 @@ from pathlib import Path
 from . import VERSION
 from .security import redact, secret_values, private_json
 from .store import units
+from .network import connection_refused
 
 REFERENCES = Path(__file__).resolve().parents[2] / 'references'
 # __file__: scripts/peers_core/api.py -> skill is parents[2]
@@ -205,10 +206,11 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError('Redirect refused; credentials not forwarded')
 
 
-def transport(method,url,body,headers,timeout):
+def transport(method,url,body,headers,timeout,proxy_mode="system"):
+    if proxy_mode not in {"system", "direct"}: raise ValueError("Invalid proxy mode")
     request=urllib.request.Request(url,data=None if body is None else json.dumps(body,allow_nan=False).encode(),headers=headers,method=method)
     try:
-        with urllib.request.build_opener(NoRedirect).open(request,timeout=timeout) as res:
+        with urllib.request.build_opener(NoRedirect, *([urllib.request.ProxyHandler({})] if proxy_mode == "direct" else [])).open(request,timeout=timeout) as res:
             raw=res.read(16*1024*1024+1)
             code=res.status
     except urllib.error.HTTPError as exc:
@@ -273,7 +275,8 @@ class Client:
             headers['Authorization']='Bearer '+self.settings['key']
         safe=None;code=None
         try:
-            code,payload=self.send(method,url,None if method=='GET' else spec['body'],headers,timeout)
+            send_args=(method,url,None if method=='GET' else spec['body'],headers,timeout)
+            code,payload=(transport(*send_args, proxy_mode=self.settings.get('proxy_mode','system')) if self.send is transport else self.send(*send_args))
             if secret_output and 200<=code<300:
                 private_json(secret_output,payload)
             secrets.extend(secret_values(payload))
@@ -295,5 +298,14 @@ class Client:
                 self.store.finish(settles,state,json.loads(parent['response'] or '{}'),charged,note='settlement via '+op_id,cumulative=True)
             return {'operation_id':op_id,'reused':False,'http_status':code,'state':state,'credits':str(charged) if charged is not None else None,'response':safe}
         except Exception as exc:
-            self.store.finish(op_id,'failed' if parent else 'unknown',{'error_type':type(exc).__name__,'message':redact(str(exc),secrets),'http_status':code,'payload':safe},0 if parent else None,note='Query failed; parent task remains reserved' if parent else 'Transport/protocol failed; reconcile before retry')
-            return {'operation_id':op_id,'state':'failed' if parent else 'unknown','credits':None,'error_type':type(exc).__name__}
+            refused = code is None and connection_refused(exc)
+            origin = 'live' if self.send is transport else 'injected'
+            state = 'not_sent' if refused else 'unknown'
+            error = {'error_type':type(exc).__name__, 'message':redact(str(exc),secrets),
+                     'http_status':code, 'payload':safe, 'transport':origin,
+                     'failure_phase':'connect_refused' if refused else 'unknown',
+                     'billing_basis':'connection_not_established' if refused else 'unresolved'}
+            self.store.finish(op_id,'failed' if parent else state,error,0 if parent or refused else None,
+                note=('Query failed; parent task remains reserved' if parent else 'Connection refused before HTTP request' if refused else 'Transport/protocol failed; reconcile before retry')+'; transport='+origin)
+            return {'operation_id':op_id,'state':'failed' if parent else state,'credits':'0' if parent or refused else None,
+                    'error_type':type(exc).__name__,'response':error,'transport':origin,'reused':False}
