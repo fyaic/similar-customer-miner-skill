@@ -1,35 +1,17 @@
 {
-  "version": "2.0.0rc5",
-  "date": "2026-10-30",
-  "baseline_commit": "ff837896dc6b2312dc43b200e0c9c82df045d7bc",
+  "version": "2.0.0rc6",
+  "date": "2026-11-02",
   "tests": {
-    "passed": 169,
-    "new_network_cases": 19,
-    "warnings": 1
+    "passed": 188,
+    "warnings": 1,
+    "new_billing_cases": 19
   },
-  "skill_structure": "passed",
-  "windows_error": "typed WinError10061 simulation; no remote Windows access",
-  "production_transport_refused_proxy": "real local closed proxy, live/not_sent, zero hold/charge",
-  "old_ledger_migration": "strict fixture, original archived, idempotent; actual business ledger unavailable",
-  "installed_live": {
-    "operation": "company.search",
-    "http_status": 201,
-    "request_id": "req_Vo7FWjgHuxhY",
-    "per_page": 3,
-    "returned": 3,
-    "new_credits": "0.24",
-    "enrichment_enabled": false,
-    "review_queue": 3,
-    "exit_code": 2,
-    "full_batch_complete": false
-  },
-  "budget": {
-    "before": "14.46",
-    "after": "14.70",
-    "limit": "16.34",
-    "unresolved": 0
-  },
-  "remote_network_fixed": false,
-  "sales_effect_improvement_tested": false,
-  "automatic_diagnosis": "one credential-free check after new connection refusal; Chinese status note and private diagnostics"
+  "new_paid_api_calls": 0,
+  "remote_business_ledger_verified": false,
+  "native_windows_test": false,
+  "limits": [
+    "Fault-injection regressions, not vendor billing attestation",
+    "Historical unknown charge not cleared",
+    "No evidence of improved overall sales outcomes"
+  ]
 }

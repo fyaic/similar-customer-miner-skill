@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 import sqlite3
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -82,6 +83,29 @@ class Store:
                 self.db.execute("UPDATE config SET value=? WHERE key='baseline'", (str(total),))
             self.db.execute("UPDATE config SET value=? WHERE key='limit'", (str(units(limit)),))
         return self.budget()
+
+    def billing_report(self):
+        """Local reconciliation handoff; excludes request bodies and personal data."""
+        with self.transaction():
+            budget = self.budget()
+            unresolved = []
+            for row in self.db.execute('SELECT * FROM operations ORDER BY created'):
+                if row['state'] not in ('inflight','unknown','pending') and row['billing_known']:
+                    continue
+                payload = json.loads(row['response'] or '{}')
+                http = None
+                match = re.search(r'HTTP (\d{3});', row['notes'])
+                if match: http = int(match.group(1))
+                if isinstance(payload, dict) and payload.get('http_status') is not None:
+                    http = payload['http_status']
+                unresolved.append({'operation_id':row['id'], 'request_id':row['request_id'],
+                    'path':row['path'], 'state':row['state'], 'http_status':http,
+                    'billing_known':bool(row['billing_known']), 'confirmed_credits':credits(row['charged']),
+                    'reserved_credits':credits(row['held']), 'created':row['created']})
+        return {'budget':budget, 'provider_balance':None, 'unresolved':unresolved,
+                'paid_work_blocked':bool(unresolved), 'network_calls':0,
+                'explanation':'本地累计预算不是账户余额；预留不是已扣费。费用未决时保留预留，不自动重试。',
+                'next_action':('维护人员按 request_id 核对供应商回执；有证据后 reconcile。缺少回执不能猜零，不能仅靠换目录或加预算解锁。' if unresolved else '本地无未决费用；后续查询仍受授权范围和本地预算限制。')}
 
     def purge_operations(self, archive):
         from .security import private_json

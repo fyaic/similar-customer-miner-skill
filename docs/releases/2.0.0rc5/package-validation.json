@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0rc5",
+  "date": "2026-10-30",
+  "scope": "candidate package; clean final archive attestation stored beside delivery",
+  "files": 60,
+  "manifest": "passed",
+  "credentials_single_file": "passed",
+  "internal_reports_excluded": "passed",
+  "markdown_links": "passed",
+  "doctor_and_preview": "passed",
+  "installed_frozen_replay": "passed",
+  "installed_live_company_search": "HTTP201, 3 rows, .24 credits; enrichment intentionally disabled",
+  "installed_recovery": "passed: offline preview/apply/idempotency and original preservation"
+}

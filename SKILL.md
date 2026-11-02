@@ -2,7 +2,7 @@
 name: similar-customer-miner
 description: 根据高价值客户的 CSV/Excel 名单，使用 Trade Wind 查找相似海外 B2B 买家、补充公司与联系人，输出带来源、评分和待核事项的销售 Excel。适用于相似客户拓展和外贸买家挖掘。
 metadata:
-  version: "2.0.0rc5"
+  version: "2.0.0rc6"
 ---
 
 # 相似客户挖掘 · Trade Wind
@@ -54,3 +54,7 @@ python /path/to/similar-customer-miner/scripts/run.py --input customers.csv --ou
 分发包不含内部对比评测报告、测试摘要、客户名单结果、历史账本或旧 API key。内置凭证包仅限内部授权使用，普通安装不需要用户申请或替换 key。
 
 CLI遇到新的明确连接拒绝后，会自动做一次不带凭证的网络检查，将说明附加到.status.md，诊断细节存为.diagnostics.json；无需让业务再发起一次诊断。
+
+## 积分和邮箱异常
+
+报价、费用疑问或HTTP 500时，读取[积分与恢复](references/billing-recovery.md)。使用正式入口的“核心查询完成后再验证邮箱”顺序，自定义批次脚本也要遵守，不能逐家公司提前验邮。分开报告预算、累计费用、本轮费用和未决预留；不把预算当充值、不把预留当实扣。`billing-report --output`可一次收集脱敏对账信息，留给维护人员，不反复要求业务试收费查询。缺少回执的旧未决记录不会因升级自动消失。

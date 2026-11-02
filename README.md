@@ -1,4 +1,4 @@
-# 相似客户挖掘 · Trade Wind 2.0.0rc5
+# 相似客户挖掘 · Trade Wind 2.0.0rc6
 
 从客户 CSV/Excel 的产品画像或公司锚点查找相似海外 B2B 公司，输出带来源、评分和待核事项的销售表。在线查询只使用 Trade Wind；不读取或调用原 Apify/Hunter key。内部包内置指定 Trade Wind key，安装时保留 `.credentials/` 隐藏目录。
 
@@ -57,7 +57,7 @@ python /path/to/skill/scripts/audit_run.py leads.evidence.json --ledger /path/to
 
 分发包包含本 README、英文说明、SKILL、运行代码、配置、接口参考和输入样例；不包含内部对比评测报告、测试摘要、工程审查文档、客户结果、日志、账本或旧凭证。每个文件的 SHA-256 记录在 `MANIFEST.json`，ZIP 另附 `.sha256` 校验文件。使用 `scripts/verify_package.py` 在本地校验安装文件，无需联网。
 
-内置 key 的包仅发给获准使用账户的接收者，不上传 GitHub。安装时保留 `.credentials/`；rc5 替代 rc4，请解压至新目录，避免混用旧文件。真实任务产生的运行统计和证据用于本次结果复核，不是随包分发的内部评测资料。
+内置 key 的包仅发给获准使用账户的接收者，不上传 GitHub。安装时保留 `.credentials/`；rc6 替代 rc5，请解压至新目录，避免混用旧文件。真实任务产生的运行统计和证据用于本次结果复核，不是随包分发的内部评测资料。
 
 ## rc5 network recovery / 网络恢复
 
@@ -65,4 +65,10 @@ rc5 fixes connection-refused classification and failure provenance. Typed pre-co
 
 先执行 `python /path/to/skill/scripts/tradewind_ops.py diagnose --output network-diagnostics.json`，无Trade Wind凭证、不调用收费业务API。小样本使用 `python /path/to/skill/scripts/run.py --input customers.csv --output trial.xlsx --mode live --trial`，首个种子、最多3家候选/补全1家。预算沿用原账户累计预算。给业务侧交付Excel及.status.md中文说明，失败不等于零客户。
 
-完整流程见[网络诊断与恢复](references/network-recovery.md)。Install rc5 into a new directory, retain .credentials, and keep the original working directory/account ledger. rc4 and earlier archives remain unchanged.
+完整流程见[网络诊断与恢复](references/network-recovery.md)。Install rc6 into a new directory, retain .credentials, and keep the original working directory/account ledger. rc4 and earlier archives remain unchanged.
+
+## rc6 积分异常处理
+
+公司、联系人和海关查询先完成，再验证邮箱，减少单个邮箱故障对核心结果的影响。单条邮箱明确失败且费用回执完整时跳过该地址、不自动重试；无回执仍保留预留，不能当作零费用。中文状态区分本轮费用、累计费用、预留和本地预算余量。`tradewind_ops.py billing-report --output billing-handoff.json` 离线生成脱敏维护信息。见[积分与恢复](references/billing-recovery.md)。
+
+rc6不自动结清旧未决费用，也不保证外部500错误消失。安装保留凭证、原工作目录和账本，旧版ZIP保持不变。

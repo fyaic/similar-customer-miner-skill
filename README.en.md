@@ -1,4 +1,4 @@
-# Similar Customer Miner · Trade Wind 2.0.0rc5
+# Similar Customer Miner · Trade Wind 2.0.0rc6
 
 An internal pilot skill for finding product-related overseas B2B company candidates from CSV/Excel customer profiles. Live mode uses Trade Wind only; legacy Apify/Hunter credentials are disabled. Provider selection `hunter` means Trade Wind's upstream source, not a separate Hunter credential.
 
@@ -12,7 +12,7 @@ Outputs: live four-sheet Excel (`线索名单`, `待复核`, `Results`, `Summary
 
 **Usage scope:** candidate discovery with human review. Product relevance, importer status, current employment and buying authority require separate confirmation. See [skill instructions](SKILL.md), [workflow](references/workflow.md) and [API reference](references/tradewind.md).
 
-The recipient ZIP includes runtime code, configuration, examples and user instructions. Internal comparisons, evaluation reports, test summaries and engineering documents are excluded. `MANIFEST.json` records file hashes; `scripts/verify_package.py` checks them offline. Internal packages include the assigned Trade Wind key in `.credentials/`; retain that folder. rc5 supersedes rc4; install into a clean folder.
+The recipient ZIP includes runtime code, configuration, examples and user instructions. Internal comparisons, evaluation reports, test summaries and engineering documents are excluded. `MANIFEST.json` records file hashes; `scripts/verify_package.py` checks them offline. Internal packages include the assigned Trade Wind key in `.credentials/`; retain that folder. rc6 supersedes rc5; install into a clean folder.
 
 ## Execution coverage in rc4
 
@@ -28,4 +28,10 @@ rc5 fixes connection-refused classification and failure provenance. Typed pre-co
 
 先执行 `python /path/to/skill/scripts/tradewind_ops.py diagnose --output network-diagnostics.json`，无Trade Wind凭证、不调用收费业务API。小样本使用 `python /path/to/skill/scripts/run.py --input customers.csv --output trial.xlsx --mode live --trial`，首个种子、最多3家候选/补全1家。预算沿用原账户累计预算。给业务侧交付Excel及.status.md中文说明，失败不等于零客户。
 
-完整流程见[网络诊断与恢复](references/network-recovery.md)。Install rc5 into a new directory, retain .credentials, and keep the original working directory/account ledger. rc4 and earlier archives remain unchanged.
+完整流程见[网络诊断与恢复](references/network-recovery.md)。Install rc6 into a new directory, retain .credentials, and keep the original working directory/account ledger. rc4 and earlier archives remain unchanged.
+
+## rc6 billing failures
+
+Company, contact and customs work runs before mailbox verification. A terminal single-email 5xx failure with an explicit billing receipt is skipped without retry; missing receipts still retain reservations and block new paid work. Status separates run charges, cumulative charges, reservations and local budget headroom. `tradewind_ops.py billing-report --output billing-handoff.json` produces a local maintenance handoff without a business API call. See [billing recovery](references/billing-recovery.md).
+
+An upgrade cannot settle historical unknown charges or repair a provider's HTTP 500. Preserve the original working directory, account ledger and credentials.

@@ -18,6 +18,8 @@ def main(argv=None):
     p.add_argument('--state-dir')
     sub=p.add_subparsers(dest='command',required=True)
     sub.add_parser('doctor');sub.add_parser('usage');sub.add_parser('countries')
+    b=sub.add_parser('billing-report')
+    b.add_argument('--output', help='Private JSON handoff for maintainers; no business API calls')
     d=sub.add_parser('diagnose')
     d.add_argument('--proxy-mode',choices=['system','direct'],default='system')
     d.add_argument('--output')
@@ -40,9 +42,17 @@ def main(argv=None):
         print(json.dumps(result,ensure_ascii=False,indent=2))
         return 0 if result['network_reachable'] else 2
     ns=hashlib.sha256(cfg['key'].encode()).hexdigest()[:16] if cfg['key'] else 'offline'
-    store=Store(a.state_dir or cfg['state'],ns)
+    state_root=a.state_dir or cfg['state']
+    if a.command=='billing-report' and not (Path(state_root)/ns/'state.sqlite3').is_file():
+        raise ValueError('未找到原账户账本；请沿用实际运行的工作目录和state-dir，不能用空账本证明费用已解决。')
+    store=Store(state_root,ns)
     try:
-        if a.command=='recover-refused':
+        if a.command=='billing-report':
+            result=store.billing_report()
+            if a.output:
+                from src.tradewind_core.security import private_json
+                private_json(a.output, redact(result,[cfg['key']]))
+        elif a.command=='recover-refused':
             result=store.recover_refused(a.apply)
         elif a.command=='reconcile':
             store.reconcile(a.operation_id,a.credits,a.state,a.evidence)

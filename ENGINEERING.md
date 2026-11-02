@@ -1,6 +1,6 @@
-# Engineering · Trade Wind 2.0.0rc5
+# Engineering · Trade Wind 2.0.0rc6
 
-This describes the current `codex/tradewind-v2-rc5` branch. The legacy architecture is available in Git history/main; its Apify/Hunter modules and credential setup are not the v2 live pipeline.
+This describes the current `codex/tradewind-v2-rc6` branch. The legacy architecture is available in Git history/main; its Apify/Hunter modules and credential setup are not the v2 live pipeline.
 
 `parser → profiler → tradewind.mine → scoring → exporter` is the live path. Demo/test retains the old offline helpers. The CLI ignores local/secrets YAML and clears legacy credentials. `scripts/run.py` is the portable skill entrypoint. `src/tradewind_core` provides the account-scoped SQLite ledger, host allowlist, no redirects, response redaction and exact-query reuse inherited from sps-overseas-peers.
 
@@ -12,11 +12,11 @@ Contact title heuristics prioritize procurement/supply-chain, operations, then e
 
 Scoring uses the requested countries and excludes sampled customs counts from shipping strength/frequency. Grades measure field confidence, not confirmed customer quality. No output grade authorizes outreach. Live output adds a review sheet to the original three sheets; additional audit columns expose role, product-review provenance and import status.
 
-Run `python -m pytest -q tests`. rc4 validation records 150 passing tests; historical rc1/rc2 comparisons remain in their archived reports, not as new rc4 evidence. `scripts/validate_live.py` is explicitly paid; it reuses a specified ledger and stops on partial results. Raw results remain in ignored outputs. Public summaries contain no customer email addresses or key.
+Run `python -m pytest -q tests`. rc6 validation records 188 passing tests; older comparisons remain historical evidence. `scripts/validate_live.py` is explicitly paid; it reuses a specified ledger and stops on partial results. Raw results remain in ignored outputs. Public summaries contain no customer email addresses or key.
 
 `src/tradewind_core/__init__.py` supplies the runtime/build version. Match pyproject, config, SKILL, both READMEs and release reports when releasing. Build allowlists files and generates MANIFEST/DISTRIBUTION metadata. Never publish credential-bearing packages. Package install checks run in a separate directory with ambient keys intentionally different; the bundled key must win unless explicitly overridden.
 
-Recipient packaging excludes `docs/`, engineering documents, tests and evaluation scripts. Runtime API contracts remain included; build strips internal `live_verified`/`live_scope` annotations from the packaged catalog. User-facing Markdown links must resolve within the ZIP. The assigned key appears only in `.credentials/tradewind.env`; metadata records `distribution_profile: recipient`. Internal evaluations remain separately managed in the repository/private outputs. Tags v2.0.0rc2 and v2.0.0rc3 preserve the prior distributions; rc4 uses its own branch/tag and archive names. Historical reports are retained under docs/releases/2.0.0rc2 and docs/releases/2.0.0rc3; current validation files describe rc4 only.
+Recipient packaging excludes `docs/`, engineering documents, tests and evaluation scripts. Runtime API contracts remain included; build strips internal `live_verified`/`live_scope` annotations from the packaged catalog. User-facing Markdown links must resolve within the ZIP. The assigned key appears only in `.credentials/tradewind.env`; metadata records `distribution_profile: recipient`. Internal evaluations remain separately managed in the repository/private outputs. Tags v2.0.0rc2 and v2.0.0rc3 preserve the prior distributions; rc4 uses its own branch/tag and archive names. Historical reports are retained under docs/releases/2.0.0rc2 and docs/releases/2.0.0rc3; current validation files describe rc6 only.
 
 Build with `python scripts/build_skill.py --output /private/path/skill.zip --key-file /private/path/tradewind.env --recipient sps`. Verify exclusion rules, credential placement, local links and portable doctor before delivery.
 
@@ -26,8 +26,12 @@ Explicit execution mode; per-query/company stage coverage; local ledger receipt 
 
 ## Release identity
 
-See [release management](docs/RELEASES.md) and the [fixed rc4 delivery record](docs/DELIVERY_RC4.md). The delivered ZIP remains tied to tag v2.0.0rc5 / 85f3fd2. Documentation-only maintenance may advance this branch without moving the tag or replacing the package. Runtime and bundled-document changes require a new release identity.
+See [release management](docs/RELEASES.md) and the [fixed rc4 delivery record](docs/DELIVERY_RC4.md). The current ZIP is tied to v2.0.0rc6; resolve its source commit through the tag and MANIFEST. Historical rc4 remains at 85f3fd2. Documentation-only maintenance may advance this branch without moving the tag or replacing the package. Runtime and bundled-document changes require a new release identity.
 
 ## rc5 connection incident
 
 Typed urllib connection-refused errors are classified not_sent and release only that attempt's reservation; timeouts/resets remain unknown. No in-call retries. The account ledger preserves prior attempts and opt-in rc4 migration archives originals transactionally in network_recoveries. Network diagnosis uses credential-free HEAD with the same system proxy; direct mode is explicit only. --trial bounds the first seed, discovery query and enrichment. Business output includes .status.md; JSON remains diagnostic evidence. See docs/RELEASE_REVIEW.md for current evidence; rc4 delivery identity remains historical and unchanged.
+
+## rc6 billing workflow
+
+Current delivery: v2.0.0rc6 on codex/tradewind-v2-rc6. Core stages precede mailbox checks. Known terminal email failures are retained without retry; unresolved billing remains blocked. Use billing-report for a redacted local handoff. See docs/RELEASE_REVIEW.md and docs/validation.json for this release; earlier counts refer only to historical releases.

@@ -177,11 +177,14 @@ def run_pipeline(input_path: str, output_path: str, config: Dict[str, Any], min_
     if config.get("runtime", {}).get("mode") == "live":
         tw = config.get("_run_stats", {}).get("tradewind", {})
         audit = tw.get("execution_audit", {})
+        budget = tw.get('budget', {})
         text = ("# 本次查询说明\n\n"
             + ("本次为小样本试跑：仅首个种子，最多3家候选、补全1家。\n\n" if config.get("runtime", {}).get("trial") else "")
             + f"当前可交付候选：{len(filtered)}家；范围内完成：{audit.get('companies_complete',0)}/{audit.get('companies_planned',0)}家。\n\n"
             + f"执行状态：{audit.get('classification','unproven')}。{tw.get('stop_reason') or '覆盖不足请查待复核队列和补全上限；缓存不算新增API案例。'}\n\n"
             + f"本轮已确认费用：{tw.get('new_credits_known','unknown')} credits；本地预留不代表实际扣费。\n\n"
+            + f"本地账本累计预算：{budget.get('limit','unknown')}；累计已确认：{budget.get('charged','unknown')}；待核预留：{budget.get('reserved','unknown')}；本地预算余量：{budget.get('available','unknown')} credits。上述余量不是供应商账户余额，也不是保证可消费金额。\n\n"
+            + f"费用未决操作：{budget.get('unresolved_operations','unknown')}笔。邮箱验证在公司、联系人及海关查询之后执行；未完成验证的地址不能标为已验证。\n\n"
             + "连接失败不等于查询到零客户；不会通过等待自动解锁，也不自动重复收费请求。诊断信息留给维护人员，业务侧交付本说明及Excel。\n")
         Path(output_path).with_suffix('.status.md').write_text(text, encoding='utf-8')
     _print_summary(filtered)

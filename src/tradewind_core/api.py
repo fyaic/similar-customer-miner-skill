@@ -285,6 +285,18 @@ class Client:
             state=outcome(payload) if 200<=code<300 else 'failed'
             # Nonterminal/protocol outcomes are never silently converted to free failures.
             if code<200 or code>=500 or 300<=code<400:state='unknown'
+            # Only a synchronous single-email error with an explicit terminal
+            # failure AND a numeric billing receipt can settle a 5xx response.
+            # HTTP status alone (including 500) never proves zero cost.
+            if (code >= 500 and name == 'email.verify' and spec['body'].get('type') == 'single'
+                    and isinstance(payload, dict) and payload.get('success') is False
+                    and payload.get('error') and charged is not None
+                    and isinstance(payload.get('request_id'), str) and payload['request_id']
+                    and not (payload.get('task_id') or payload.get('taskId'))
+                    and not (isinstance(payload.get('data'),dict) and (payload['data'].get('task_id') or payload['data'].get('taskId')))
+                    and not ((payload.get('meta') or {}).get('waterfall') or {}).get('async_pending')
+                    and payload.get('status') in (None,'failed','error')):
+                state='failed'
             if state=='completed' and (spec['access']=='data') and not isinstance(payload,dict):state='unknown'
             if isinstance(payload,dict) and 'text' in payload and spec['access']=='data':state='unknown'
             if charged is None and spec['access'] in ('read','admin') and not parent:

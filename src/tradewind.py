@@ -253,6 +253,12 @@ class Session:
         elif result.get('credits') is not None:
             self.new_credits += Decimal(result['credits'])
         if result['state'] != 'completed':
+            # A terminal single-address failure with an explicit receipt can be
+            # skipped without retrying it or blocking unrelated addresses.
+            if (name == 'email.verify' and body.get('type') == 'single'
+                    and result['state'] == 'failed' and result['billing_known']
+                    and saved and re.match(r'HTTP 5\d\d;', saved['notes'])):
+                return None
             self.stop_reason = ('连接被拒绝，HTTP请求未发出；本地预留已释放。先运行 diagnose 检查网络/代理，修复后再执行。' if result['state']=='not_sent' else 'Operation '+op_id+' is '+result['state']+'; inspect billing before retry')
             return None
         return result
@@ -260,7 +266,7 @@ class Session:
     def report(self):
         return {'provider':'tradewind','run_started_at':self.started_at,
                 'connection_refused':any(e.get('state') == 'not_sent' for e in self.events),'new_credits_known':str(self.new_credits),
-                'reused_requests':self.reused,'budget':self.store.budget(),'stop_reason':self.stop_reason,
+                'reused_requests':self.reused,'budget':self.store.budget(),'billing_report':self.store.billing_report(),'stop_reason':self.stop_reason,
                 'operations':self.events,'warning':'Local planning budget, not provider hard cap; results are unreviewed candidates'}
 
 
@@ -452,7 +458,17 @@ def mine(profiles, config, output_path, send=None):
                                 apply_person(company,row,citation(enriched))
                         if company.contact_name:
                             break
-            if opts.get('verify_email',False) and company.email:
+            if session.stop_reason:
+                break
+        # Finish requested company/contact/customs work for the batch before
+        # optional mailbox checks. An unresolved mailbox charge must not erase
+        # or preempt core results for later companies.
+        for company in companies:
+            if session.stop_reason:
+                break
+            if (opts.get('contact_search_enabled', True) and opts.get('verify_email', False)
+                    and company.email and coverage_by_id[id(company)]['disposition'] == 'qualified'):
+                session.context = {'seed': company.source_seed, 'domain': domain(company.website)}
                 verified = session.call('email.verify',{'type':'single','mode':opts.get('email_verification_mode', 'quick'),'email':company.email})
                 if verified:
                     apply_verification(company, verified)
